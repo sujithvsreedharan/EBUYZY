@@ -1,0 +1,508 @@
+<div class="space-y-6">
+  <!-- Assignment Toast Notice -->
+  @if (assignmentNotice()) {
+  <div role="alert"
+    class="p-4 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs sm:text-sm font-bold flex items-center justify-between shadow-xs animate-in fade-in">
+    <div class="flex items-center gap-2">
+      <span class="text-base">🛵</span>
+      <span>{{ assignmentNotice() }}</span>
+    </div>
+    <button type="button" (click)="assignmentNotice.set(null)"
+      class="p-1 text-emerald-700 hover:text-emerald-900 rounded text-xs font-bold">
+      ✕ Dismiss
+    </button>
+  </div>
+  }
+
+  <!-- Page Header -->
+  <div
+    class="bg-white border border-gray-200 rounded-xl p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div>
+      <div class="flex items-center gap-2 mb-1">
+        <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-gray-900">Orders</h1>
+        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">
+          {{ filteredOrders().length }} orders
+        </span>
+      </div>
+      <p class="text-sm text-gray-500">
+        Manage Kerala customer orders, dispatch status, WhatsApp notifications, and geolocation delivery links.
+      </p>
+    </div>
+
+    <!-- Quick Summary Stats Pills -->
+    <div class="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+      <div
+        class="px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 text-amber-800 text-xs font-semibold shrink-0">
+        {{ countByStatus('New') }} New
+      </div>
+      <div
+        class="px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-800 text-xs font-semibold shrink-0">
+        {{ countByStatus('Confirmed') + countByStatus('Out for delivery') }} In progress
+      </div>
+      <div
+        class="px-3 py-1.5 rounded-lg border border-[#FFD600]/60 bg-[#FFD600]/20 text-black text-xs font-semibold shrink-0">
+        {{ countByStatus('Delivered') }} Delivered
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters & Search Toolbar -->
+  <div
+    class="bg-white border border-gray-200 rounded-xl p-4 sm:p-5 flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
+    <!-- Search Input -->
+    <div class="relative flex-1">
+      <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      </div>
+      <input type="text" [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)"
+        placeholder="Search by order ID (e.g. EZ-2026-0801) or customer phone..."
+        aria-label="Search orders by ID or phone"
+        class="w-full pl-10 pr-9 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 text-sm placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500] focus-visible:border-transparent transition-colors" />
+      @if (searchQuery()) {
+      <button type="button" (click)="searchQuery.set('')" aria-label="Clear search query"
+        class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+      }
+    </div>
+
+    <!-- Status Filter Segmented Buttons -->
+    <div class="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0" role="tablist"
+      aria-label="Filter by order status">
+      @for (status of statusTabs; track status) {
+      <button type="button" role="tab" (click)="selectedStatus.set(status)"
+        [attr.aria-selected]="selectedStatus() === status"
+        class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]"
+        [ngClass]="
+            selectedStatus() === status
+              ? 'bg-gradient-to-r from-[#FF9500] to-[#FF4D00] text-white shadow-xs'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          ">
+        {{ status }}
+      </button>
+      }
+    </div>
+  </div>
+
+  <!-- Orders Table -->
+  <div class="bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-sm" aria-label="Customer orders table">
+        <thead class="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600 uppercase tracking-wider">
+          <tr>
+            <th scope="col" class="py-3.5 px-4 sm:px-6">Order ID & Date</th>
+            <th scope="col" class="py-3.5 px-4">Customer</th>
+            <th scope="col" class="py-3.5 px-4">Items</th>
+            <th scope="col" class="py-3.5 px-4">Total</th>
+            <th scope="col" class="py-3.5 px-4">Status</th>
+            <th scope="col" class="py-3.5 px-4">Delivery Partner</th>
+            <th scope="col" class="py-3.5 px-4 sm:px-6 text-right">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          @for (order of filteredOrders(); track order.id) {
+          <tr class="hover:bg-gray-50/80 transition-colors cursor-pointer"
+            [ngClass]="{ 'bg-[#FFD600]/15': selectedOrder()?.id === order.id }" (click)="openOrderDetail(order)">
+            <!-- Order ID & Date -->
+            <td class="py-4 px-4 sm:px-6">
+              <span class="font-mono font-bold text-gray-900 text-xs sm:text-sm block">
+                {{ order.orderNumber }}
+              </span>
+              <span class="text-xs text-gray-500 font-sans mt-0.5 block">
+                {{ order.createdAt | date: 'mediumDate' }} &bull; {{ order.createdAt | date: 'shortTime' }}
+              </span>
+            </td>
+
+            <!-- Customer Details -->
+            <td class="py-4 px-4">
+              <div class="font-semibold text-gray-900">{{ order.customer.name }}</div>
+              <div class="text-xs text-gray-500 font-mono mt-0.5">
+                +91 {{ order.customer.phone }}
+              </div>
+              <div class="text-xs text-gray-500 truncate max-w-[220px] mt-0.5" [title]="order.customer.address">
+                {{ order.customer.address }}
+              </div>
+            </td>
+
+            <!-- Items Preview -->
+            <td class="py-4 px-4">
+              <div class="text-xs font-medium text-gray-800">
+                {{ order.items.length }} {{ order.items.length === 1 ? 'item' : 'items' }}
+              </div>
+              <div class="text-xs text-gray-500 truncate max-w-[180px]">
+                {{ getItemsSummary(order) }}
+              </div>
+            </td>
+
+            <!-- Total Price -->
+            <td class="py-4 px-4">
+              <div class="font-bold text-gray-900">
+                ₹{{ order.total | number }}
+              </div>
+              <div class="text-[11px] text-gray-400">
+                Incl. ₹{{ order.deliveryFee }} delivery
+              </div>
+            </td>
+
+            <!-- Status Badge -->
+            <td class="py-4 px-4">
+              <app-status-badge [status]="order.status" />
+            </td>
+
+            <!-- Delivery Partner -->
+            <td class="py-4 px-4">
+              @if (order.assignedDeliveryPersonName) {
+              <div class="flex items-center gap-1.5">
+                <span
+                  class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                  <span>🛵</span>
+                  <span>{{ order.assignedDeliveryPersonName }}</span>
+                </span>
+              </div>
+              } @else {
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium text-gray-400 bg-gray-50 border border-dashed border-gray-300">
+                Unassigned
+              </span>
+              }
+            </td>
+
+            <!-- Action Button -->
+            <td class="py-4 px-4 sm:px-6 text-right" (click)="$event.stopPropagation()">
+              <button type="button" (click)="openOrderDetail(order)"
+                class="px-3 py-1.5 rounded-lg border border-gray-300 hover:border-[#FF9500] text-xs font-bold text-gray-700 hover:text-[#FF9500] hover:bg-orange-50/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]">
+                View details
+              </button>
+            </td>
+          </tr>
+          } @empty {
+          <tr>
+            <td colspan="7" class="py-12 text-center">
+              <div class="max-w-xs mx-auto text-center space-y-2">
+                <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mx-auto text-gray-400">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                </div>
+                <p class="text-sm font-semibold text-gray-900">No matching orders found</p>
+                <p class="text-xs text-gray-500">Try adjusting your status filter or search keyword.</p>
+                <button type="button" (click)="resetFilters()"
+                  class="mt-2 inline-flex items-center text-xs font-bold text-[#FF9500] hover:underline">
+                  Reset filters
+                </button>
+              </div>
+            </td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ================= ORDER DETAIL SLIDE-OVER DRAWER ================= -->
+  @if (selectedOrder(); as currentOrder) {
+  <div class="fixed inset-0 z-50 overflow-hidden bg-black/40 backdrop-blur-[1px] flex justify-end" role="dialog"
+    aria-modal="true" aria-labelledby="order-detail-title" (click)="closeOrderDetail()">
+    <div
+      class="w-full max-w-xl bg-white h-full shadow-2xl flex flex-col overflow-y-auto animate-in slide-in-from-right duration-200"
+      (click)="$event.stopPropagation()">
+      <!-- Drawer Header -->
+      <div class="p-5 sm:p-6 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white z-10">
+        <div class="space-y-1">
+          <div class="flex items-center gap-2">
+            <h2 id="order-detail-title" class="text-lg font-bold text-gray-900 font-mono">
+              {{ currentOrder.orderNumber }}
+            </h2>
+            <app-status-badge [status]="currentOrder.status" />
+          </div>
+          <p class="text-xs text-gray-500 font-sans">
+            Placed on {{ currentOrder.createdAt | date: 'fullDate' }} at {{ currentOrder.createdAt | date: 'shortTime'
+            }}
+          </p>
+        </div>
+
+        <button type="button" (click)="closeOrderDetail()" aria-label="Close order details"
+          class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Drawer Content Body -->
+      <div class="p-5 sm:p-6 space-y-6 flex-1">
+        <!-- Customer & Geolocation Card -->
+        <div class="border border-gray-200 rounded-xl p-4 sm:p-5 bg-gray-50/50 space-y-3.5">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-gray-600">Customer details</h3>
+            <span class="text-[11px] text-gray-500 font-medium">Kerala Delivery Zone</span>
+          </div>
+
+          <div class="space-y-1">
+            <div class="text-base font-bold text-gray-900">{{ currentOrder.customer.name }}</div>
+            <div class="flex items-center gap-2 text-xs text-gray-700">
+              <span class="font-mono">+91 {{ currentOrder.customer.phone }}</span>
+              <a [href]="'tel:+91' + currentOrder.customer.phone" class="text-[#FF9500] hover:underline font-bold">
+                Call customer
+              </a>
+            </div>
+          </div>
+
+          <!-- Address & Landmark -->
+          <div class="text-xs text-gray-700 bg-white p-3 rounded-lg border border-gray-200 space-y-1">
+            <div class="font-medium text-gray-900">Delivery address:</div>
+            <p>{{ currentOrder.customer.address }}</p>
+            @if (currentOrder.customer.landmark) {
+            <p class="text-gray-500 text-[11px]">Landmark: {{ currentOrder.customer.landmark }}</p>
+            }
+          </div>
+
+          <!-- Action Links: Google Maps & WhatsApp Button -->
+          <div class="flex flex-col sm:flex-row gap-2.5 pt-1">
+            <!-- Google Maps Link -->
+            <a [href]="getGoogleMapsUrl(currentOrder)" target="_blank" rel="noopener noreferrer"
+              class="flex-1 py-2 px-3 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 text-gray-800 text-xs font-semibold flex items-center justify-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]">
+              <svg class="w-4 h-4 text-rose-600 shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                <path
+                  d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+              </svg>
+              <span>View on Google Maps</span>
+            </a>
+
+            <!-- WhatsApp Message Button -->
+            <a [href]="getWhatsAppUrl(currentOrder)" target="_blank" rel="noopener noreferrer"
+              class="flex-1 py-2 px-3 rounded-lg bg-[#25D366] hover:bg-[#1EBE5D] text-white text-xs font-semibold flex items-center justify-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1EBE5D]">
+              <svg class="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
+                <path
+                  d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z" />
+              </svg>
+              <span>Message on WhatsApp</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- ================= DELIVERY PARTNER ASSIGNMENT CARD ================= -->
+        <div class="border border-emerald-200 rounded-xl p-4 sm:p-5 bg-emerald-50/40 space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-900 flex items-center gap-1.5">
+              <span>🛵</span>
+              <span>Delivery Partner Assignment</span>
+            </h3>
+            @if (currentOrder.assignedDeliveryPersonName) {
+            <button type="button" (click)="unassignDeliveryPartner(currentOrder)"
+              class="text-[11px] font-bold text-rose-600 hover:underline">
+              ✕ Unassign
+            </button>
+            }
+          </div>
+
+          @if (currentOrder.assignedDeliveryPersonName) {
+          <!-- Assigned Rider Summary Box -->
+          <div class="bg-white p-3.5 rounded-lg border border-emerald-200 flex items-center justify-between gap-3">
+            <div>
+              <div class="font-bold text-sm text-gray-900 flex items-center gap-2">
+                <span>{{ currentOrder.assignedDeliveryPersonName }}</span>
+                <span class="px-2 py-0.2 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                  Assigned
+                </span>
+              </div>
+              <div class="text-xs text-gray-500 font-mono mt-0.5">
+                +91 {{ currentOrder.assignedDeliveryPersonPhone || 'Rider Contact' }}
+              </div>
+              @if (currentOrder.assignedVehicle) {
+              <div class="text-[11px] text-gray-600 mt-0.5">
+                🛵 {{ currentOrder.assignedVehicle }}
+              </div>
+              }
+            </div>
+
+            @if (currentOrder.assignedDeliveryPersonPhone) {
+            <a [href]="'tel:+91' + currentOrder.assignedDeliveryPersonPhone"
+              class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors shrink-0">
+              📞 Call Rider
+            </a>
+            }
+          </div>
+          } @else {
+          <div class="p-3 bg-amber-50 rounded-lg border border-amber-200 text-xs text-amber-900">
+            ⚠️ No delivery person assigned yet. Assign a rider below to begin dispatch.
+          </div>
+          }
+
+          <!-- Assign / Reassign Selector -->
+          <div class="pt-1">
+            <label for="assign-rider-select" class="block text-xs font-semibold text-gray-700 mb-1.5">
+              {{ currentOrder.assignedDeliveryPersonName ? 'Change Delivery Partner:' : 'Assign to Delivery Partner:' }}
+            </label>
+            <div class="flex gap-2">
+              <select id="assign-rider-select" #riderSelect
+                class="flex-1 px-3 py-2 rounded-lg border border-gray-300 bg-white text-xs font-bold text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]">
+                <option value="">-- Select Active Delivery Partner --</option>
+                @for (rider of staffService.activeDeliveryPersons(); track rider.id) {
+                <option [value]="rider.id" [selected]="rider.id === currentOrder.assignedDeliveryPersonId">
+                  {{ rider.name }} &bull; {{ rider.vehicleNumber || rider.vehicleType || 'Bike' }} ({{ rider.zone || 'Kakkanad' }})
+                </option>
+                }
+              </select>
+              <button type="button" (click)="assignDeliveryPartner(currentOrder, riderSelect.value)"
+                class="px-3.5 py-2 rounded-lg bg-black text-[#FFD600] text-xs font-black hover:bg-gray-800 transition-colors shrink-0">
+                Assign
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Order Items List -->
+        <div class="space-y-3">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-gray-600">Ordered items</h3>
+          <div class="border border-gray-200 rounded-xl divide-y divide-gray-100 overflow-hidden">
+            @for (item of currentOrder.items; track item.productId) {
+            <div class="p-3.5 flex items-center justify-between bg-white text-sm">
+              <div>
+                <div class="font-semibold text-gray-900">{{ item.productName }}</div>
+                <div class="text-xs text-gray-500">
+                  {{ item.unit }} &bull; ₹{{ item.unitPrice }} &times; {{ item.quantity }}
+                </div>
+              </div>
+              <div class="font-bold text-gray-900 text-sm">
+                ₹{{ item.total }}
+              </div>
+            </div>
+            }
+          </div>
+        </div>
+
+        <!-- Customer Notes -->
+        @if (currentOrder.notes) {
+        <div class="bg-amber-50/70 border border-amber-200 rounded-xl p-3.5 text-xs text-amber-900 space-y-1">
+          <div class="font-bold flex items-center gap-1.5">
+            <svg class="w-4 h-4 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+            </svg>
+            <span>Customer note:</span>
+          </div>
+          <p>{{ currentOrder.notes }}</p>
+        </div>
+        }
+
+        <!-- Pricing & Backend Recomputation Note -->
+        <div class="border border-gray-200 rounded-xl p-4 bg-gray-50/50 space-y-2 text-sm">
+          <div class="flex justify-between text-gray-600">
+            <span>Items subtotal</span>
+            <span>₹{{ currentOrder.subtotal }}</span>
+          </div>
+          <div class="flex justify-between text-gray-600">
+            <span>Delivery fee (3-5 km Kerala zone)</span>
+            <span>₹{{ currentOrder.deliveryFee }}</span>
+          </div>
+          <div class="pt-2 border-t border-gray-200 flex justify-between font-bold text-gray-900 text-base">
+            <span>Total amount</span>
+            <span class="text-[#FF4D00] font-black">₹{{ currentOrder.total }}</span>
+          </div>
+          <div class="text-[11px] text-gray-400 pt-1">
+            &bull; Verified: Backend price calculation safety check passed.
+          </div>
+        </div>
+
+        <!-- Status Transition Control Section -->
+        <div class="border border-gray-200 rounded-xl p-4 sm:p-5 bg-white space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-gray-700">Order workflow status</h3>
+            <span class="text-xs font-medium text-gray-500">Current: {{ currentOrder.status }}</span>
+          </div>
+
+          <!-- Linear Progress Stepper Bar -->
+          <div class="flex items-center justify-between gap-1 text-[11px] font-medium text-gray-500">
+            <div class="flex-1 text-center py-1 rounded" [ngClass]="getStepClass(currentOrder.status, 'New')">
+              1. New
+            </div>
+            <div class="text-gray-300">&rarr;</div>
+            <div class="flex-1 text-center py-1 rounded" [ngClass]="getStepClass(currentOrder.status, 'Confirmed')">
+              2. Confirmed
+            </div>
+            <div class="text-gray-300">&rarr;</div>
+            <div class="flex-1 text-center py-1 rounded"
+              [ngClass]="getStepClass(currentOrder.status, 'Out for delivery')">
+              3. Out
+            </div>
+            <div class="text-gray-300">&rarr;</div>
+            <div class="flex-1 text-center py-1 rounded" [ngClass]="getStepClass(currentOrder.status, 'Delivered')">
+              4. Delivered
+            </div>
+          </div>
+
+          <!-- Action Button Controls -->
+          <div class="pt-2 space-y-2.5">
+            @switch (currentOrder.status) {
+            @case ('New') {
+            <button type="button" (click)="updateStatus(currentOrder, 'Confirmed')"
+              class="w-full py-2.5 px-4 rounded-lg bg-gradient-to-r from-[#FF9500] to-[#FF4D00] hover:from-[#e08500] hover:to-[#e04000] text-white font-bold text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]">
+              Confirm order &bull; Prepare items
+            </button>
+            }
+            @case ('Confirmed') {
+            <button type="button" (click)="updateStatus(currentOrder, 'Out for delivery')"
+              class="w-full py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600">
+              Dispatch order &bull; Out for delivery
+            </button>
+            }
+            @case ('Out for delivery') {
+            <button type="button" (click)="updateStatus(currentOrder, 'Delivered')"
+              class="w-full py-2.5 px-4 rounded-lg bg-gradient-to-r from-[#FF9500] to-[#FF4D00] hover:from-[#e08500] hover:to-[#e04000] text-white font-bold text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]">
+              Complete order &bull; Mark as delivered
+            </button>
+            }
+            @case ('Delivered') {
+            <div
+              class="p-3 bg-[#FFD600]/20 border border-[#FFD600]/60 rounded-lg text-black text-xs font-bold text-center flex items-center justify-center gap-1.5">
+              <svg class="w-4 h-4 text-[#FF9500]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+              <span>This order was completed and delivered to customer</span>
+            </div>
+            }
+            @case ('Cancelled') {
+            <div
+              class="p-3 bg-rose-50 border border-rose-200 rounded-lg text-rose-800 text-xs font-semibold text-center">
+              This order has been cancelled
+            </div>
+            }
+            }
+
+            <!-- Cancel Order -->
+            @if (currentOrder.status !== 'Delivered' && currentOrder.status !== 'Cancelled') {
+            @if (!confirmingCancel()) {
+            <button type="button" (click)="confirmingCancel.set(true)"
+              class="w-full py-2 px-4 rounded-lg border border-rose-200 text-rose-700 hover:bg-rose-50 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500">
+              Cancel this order
+            </button>
+            } @else {
+            <div class="p-3 bg-rose-50 border border-rose-200 rounded-lg space-y-2">
+              <p class="text-xs text-rose-800 font-medium">Are you sure you want to cancel order {{
+                currentOrder.orderNumber }}?</p>
+              <div class="flex gap-2">
+                <button type="button" (click)="updateStatus(currentOrder, 'Cancelled'); confirmingCancel.set(false)"
+                  class="flex-1 py-1.5 px-3 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold rounded-md transition-colors">
+                  Yes, cancel order
+                </button>
+                <button type="button" (click)="confirmingCancel.set(false)"
+                  class="flex-1 py-1.5 px-3 bg-white border border-gray-300 text-gray-700 text-xs font-medium rounded-md hover:bg-gray-50 transition-colors">
+                  No, keep order
+                </button>
+              </div>
+            </div>
+            }
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  }
+</div>

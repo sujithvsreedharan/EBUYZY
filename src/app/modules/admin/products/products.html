@@ -1,0 +1,407 @@
+<div class="space-y-6">
+  <!-- Page Header & Action Bar -->
+  <div
+    class="bg-white border border-gray-200 rounded-xl p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div>
+      <div class="flex items-center gap-2 mb-1">
+        <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-gray-900">Products</h1>
+        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">
+          {{ filteredProducts().length }} items
+        </span>
+      </div>
+      <p class="text-sm text-gray-500">
+        Kerala grocery catalog, pricing in INR (₹), units, and inline stock management for EBUYZY.
+      </p>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <button type="button" (click)="openAddModal()"
+        class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-[#FF9500] to-[#FF4D00] hover:from-[#e08500] hover:to-[#e04000] text-white text-sm font-bold shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+        <span>Add product</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Inventory KPI Counters -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+    <div class="bg-white border border-gray-200 rounded-xl p-4">
+      <div class="text-xs font-medium text-gray-500">Total catalog</div>
+      <div class="text-xl font-bold text-gray-900 mt-1">{{ products().length }}</div>
+    </div>
+    <div class="bg-white border border-gray-200 rounded-xl p-4">
+      <div class="text-xs font-medium text-gray-500">In stock items</div>
+      <div class="text-xl font-bold text-gray-900 mt-1">{{ inStockCount() }}</div>
+    </div>
+    <div class="bg-white border border-gray-200 rounded-xl p-4">
+      <div class="text-xs font-medium text-gray-500">Low stock (&lt; 10)</div>
+      <div class="text-xl font-bold text-amber-700 mt-1">{{ lowStockCount() }}</div>
+    </div>
+    <div class="bg-white border border-gray-200 rounded-xl p-4">
+      <div class="text-xs font-medium text-gray-500">Out of stock</div>
+      <div class="text-xl font-bold text-rose-700 mt-1">{{ outOfStockCount() }}</div>
+    </div>
+  </div>
+
+  <!-- Filters & Search Toolbar -->
+  <div
+    class="bg-white border border-gray-200 rounded-xl p-4 sm:p-5 flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
+    <!-- Search Input -->
+    <div class="relative flex-1">
+      <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      </div>
+      <input type="text" [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)"
+        placeholder="Search products by name (e.g. Matta Rice, Coconut, Nendran)..." aria-label="Search products"
+        class="w-full pl-10 pr-9 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 text-sm placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500] focus-visible:border-transparent transition-colors" />
+      @if (searchQuery()) {
+      <button type="button" (click)="searchQuery.set('')" aria-label="Clear product search"
+        class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+      }
+    </div>
+
+    <!-- Category Dropdown Filter -->
+    <div class="flex items-center gap-2">
+      <label for="categoryFilter" class="text-xs font-semibold text-gray-600 shrink-0">Category:</label>
+      <select id="categoryFilter" [ngModel]="selectedCategoryId()" (ngModelChange)="selectedCategoryId.set($event)"
+        class="py-2 pl-3 pr-8 rounded-lg border border-gray-300 bg-white text-gray-800 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]">
+        <option value="all">All categories</option>
+        @for (cat of categories(); track cat.id) {
+        <option [value]="cat.id">{{ cat.name }}</option>
+        }
+      </select>
+    </div>
+  </div>
+
+  <!-- Products Table -->
+  <div class="bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-sm" aria-label="EBUYZY product inventory table">
+        <thead class="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600 uppercase tracking-wider">
+          <tr>
+            <th scope="col" class="py-3.5 px-4 sm:px-6">Product</th>
+            <th scope="col" class="py-3.5 px-4">Category</th>
+            <th scope="col" class="py-3.5 px-4">Price & Unit</th>
+            <th scope="col" class="py-3.5 px-4">Stock level</th>
+            <th scope="col" class="py-3.5 px-4">In stock</th>
+            <th scope="col" class="py-3.5 px-4 sm:px-6 text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          @for (product of filteredProducts(); track product.id) {
+          <tr class="hover:bg-gray-50/80 transition-colors">
+            <!-- Product Image & Name -->
+            <td class="py-3.5 px-4 sm:px-6">
+              <div class="flex items-center gap-3">
+                <img [src]="product.imageUrl" [alt]="product.name"
+                  class="w-11 h-11 rounded-lg object-cover bg-gray-100 border border-gray-200 shrink-0" loading="lazy"
+                  onerror="this.src='https://images.unsplash.com/photo-1542838132-92c53300491e?w=100&auto=format&fit=crop&q=60'" />
+                <div class="min-w-0">
+                  <span class="font-semibold text-gray-900 block truncate max-w-[200px] sm:max-w-[260px]"
+                    [title]="product.name">
+                    {{ product.name }}
+                  </span>
+                  <span class="text-xs text-gray-400 font-mono">ID: {{ product.id }}</span>
+                </div>
+              </div>
+            </td>
+
+            <!-- Category -->
+            <td class="py-3.5 px-4">
+              <span
+                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                {{ getCategoryName(product.categoryId) }}
+              </span>
+            </td>
+
+            <!-- Price & Unit -->
+            <td class="py-3.5 px-4">
+              <div class="font-bold text-gray-900 text-sm">₹{{ product.price }}</div>
+              <div class="text-xs text-gray-500">per {{ product.unit }}</div>
+            </td>
+
+            <!-- Inline Stock Level Stepper & Quick Edit -->
+            <td class="py-3.5 px-4">
+              <div class="flex items-center gap-2">
+                <div class="inline-flex items-center rounded-lg border border-gray-300 bg-white">
+                  <button type="button" (click)="decrementStock(product)" [disabled]="product.stock <= 0"
+                    [attr.aria-label]="'Decrease stock for ' + product.name"
+                    class="px-2 py-1 text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors rounded-l-lg focus-visible:outline-none">
+                    &minus;
+                  </button>
+                  <span class="w-10 text-center font-mono font-bold text-xs text-gray-900">
+                    {{ product.stock }}
+                  </span>
+                  <button type="button" (click)="incrementStock(product)"
+                    [attr.aria-label]="'Increase stock for ' + product.name"
+                    class="px-2 py-1 text-gray-600 hover:bg-gray-100 transition-colors rounded-r-lg focus-visible:outline-none">
+                    +
+                  </button>
+                </div>
+
+                @if (product.stock === 0) {
+                <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                  Empty
+                </span>
+                } @else if (product.stock < 10) { <span
+                  class="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                  Low ({{ product.stock }})
+                  </span>
+                  }
+              </div>
+            </td>
+
+            <!-- Inline In-stock Toggle Switch -->
+            <td class="py-3.5 px-4">
+              <button type="button" role="switch" (click)="toggleInStock(product)" [attr.aria-checked]="product.inStock"
+                [attr.aria-label]="'Toggle in-stock status for ' + product.name"
+                class="relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]"
+                [ngClass]="product.inStock ? 'bg-[#FF9500]' : 'bg-gray-300'">
+                <span
+                  class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                  [ngClass]="product.inStock ? 'translate-x-4' : 'translate-x-0'"></span>
+              </button>
+            </td>
+
+            <!-- Actions (Edit & Delete) -->
+            <td class="py-3.5 px-4 sm:px-6 text-right">
+              <div class="inline-flex items-center gap-1.5 justify-end">
+                <button type="button" (click)="openEditModal(product)" aria-label="Edit product" title="Edit product"
+                  class="p-1.5 rounded-lg border border-gray-200 text-gray-600 hover:text-[#FF9500] hover:border-[#FF9500] hover:bg-orange-50 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#FF9500]">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                </button>
+                <button type="button" (click)="confirmDelete(product)" aria-label="Delete product"
+                  title="Delete product"
+                  class="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:text-rose-600 hover:border-rose-300 hover:bg-rose-50 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-rose-500">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+          } @empty {
+          <tr>
+            <td colspan="6" class="py-12 text-center">
+              <div class="max-w-xs mx-auto text-center space-y-2">
+                <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mx-auto text-gray-400">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                  </svg>
+                </div>
+                <p class="text-sm font-semibold text-gray-900">No products found</p>
+                <p class="text-xs text-gray-500">Try changing your search term or category filter.</p>
+                <button type="button" (click)="resetFilters()"
+                  class="mt-2 inline-flex items-center text-xs font-bold text-[#FF9500] hover:underline">
+                  Reset filters
+                </button>
+              </div>
+            </td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ================= ADD / EDIT PRODUCT MODAL ================= -->
+  @if (isFormOpen()) {
+  <div class="fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-[1px] flex items-center justify-center p-4"
+    role="dialog" aria-modal="true" [attr.aria-labelledby]="'product-modal-title'" (click)="closeFormModal()">
+    <div
+      class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 w-full max-w-xl overflow-hidden shadow-xl max-h-[90vh] overflow-y-auto"
+      (click)="$event.stopPropagation()">
+      <!-- Modal Header -->
+      <div class="p-5 sm:p-6 border-b border-gray-200 flex items-center justify-between">
+        <div>
+          <h2 id="product-modal-title" class="text-lg font-bold text-gray-900">
+            {{ editingProduct() ? 'Edit product' : 'Add new product' }}
+          </h2>
+          <p class="text-xs text-gray-500 mt-0.5">
+            Enter Kerala grocery produce specifications, unit, price in INR, and inventory stock.
+          </p>
+        </div>
+        <button type="button" (click)="closeFormModal()" aria-label="Close dialog"
+          class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors focus-visible:outline-none">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Modal Form Body -->
+      <form [formGroup]="productForm" (ngSubmit)="saveProduct()" class="p-5 sm:p-6 space-y-4">
+        <!-- Name Input -->
+        <div>
+          <label for="prodName" class="block text-xs font-semibold text-gray-700 mb-1">
+            Product name <span class="text-rose-600">*</span>
+          </label>
+          <input id="prodName" type="text" formControlName="name" placeholder="e.g. Palakkadan Matta Rice (Vadi)"
+            class="w-full px-3.5 py-2 rounded-lg border border-gray-300 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]" />
+          @if (productForm.get('name')?.invalid && productForm.get('name')?.touched) {
+          <p class="text-xs text-rose-600 mt-1">Product name is required (min 2 characters)</p>
+          }
+        </div>
+
+        <!-- Category & Unit in 2-cols -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <!-- Category Select -->
+          <div>
+            <label for="prodCategory" class="block text-xs font-semibold text-gray-700 mb-1">
+              Category <span class="text-rose-600">*</span>
+            </label>
+            <select id="prodCategory" formControlName="categoryId"
+              class="w-full px-3.5 py-2 rounded-lg border border-gray-300 text-sm bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]">
+              <option value="" disabled>Select category</option>
+              @for (cat of categories(); track cat.id) {
+              <option [value]="cat.id">{{ cat.name }}</option>
+              }
+            </select>
+            @if (productForm.get('categoryId')?.invalid && productForm.get('categoryId')?.touched) {
+            <p class="text-xs text-rose-600 mt-1">Please select a category</p>
+            }
+          </div>
+
+          <!-- Unit Input with Quick Chips -->
+          <div>
+            <label for="prodUnit" class="block text-xs font-semibold text-gray-700 mb-1">
+              Packaging unit <span class="text-rose-600">*</span>
+            </label>
+            <input id="prodUnit" type="text" formControlName="unit" placeholder="e.g. 1 kg, 500 g, 1 pc, 1 L"
+              class="w-full px-3.5 py-2 rounded-lg border border-gray-300 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]" />
+            <div class="flex items-center gap-1.5 mt-1.5">
+              @for (sampleUnit of ['1 kg', '500 g', '1 pc', '1 bunch', '1 L']; track sampleUnit) {
+              <button type="button" (click)="setUnit(sampleUnit)"
+                class="text-[11px] px-1.5 py-0.5 rounded bg-gray-100 hover:bg-gray-200 text-gray-600">
+                {{ sampleUnit }}
+              </button>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- Price & Stock in 2-cols -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <!-- Price (INR) -->
+          <div>
+            <label for="prodPrice" class="block text-xs font-semibold text-gray-700 mb-1">
+              Price (₹ INR) <span class="text-rose-600">*</span>
+            </label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3 flex items-center font-bold text-gray-500 text-xs">₹</span>
+              <input id="prodPrice" type="number" min="1" step="1" formControlName="price" placeholder="295"
+                class="w-full pl-7 pr-3.5 py-2 rounded-lg border border-gray-300 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]" />
+            </div>
+            @if (productForm.get('price')?.invalid && productForm.get('price')?.touched) {
+            <p class="text-xs text-rose-600 mt-1">Please enter a valid price (&ge; ₹1)</p>
+            }
+          </div>
+
+          <!-- Stock Count -->
+          <div>
+            <label for="prodStock" class="block text-xs font-semibold text-gray-700 mb-1">
+              Initial stock quantity <span class="text-rose-600">*</span>
+            </label>
+            <input id="prodStock" type="number" min="0" step="1" formControlName="stock" placeholder="25"
+              class="w-full px-3.5 py-2 rounded-lg border border-gray-300 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]" />
+            @if (productForm.get('stock')?.invalid && productForm.get('stock')?.touched) {
+            <p class="text-xs text-rose-600 mt-1">Stock must be 0 or higher</p>
+            }
+          </div>
+        </div>
+
+        <!-- Image URL Input & Preview -->
+        <div>
+          <label for="prodImage" class="block text-xs font-semibold text-gray-700 mb-1">
+            Image URL <span class="text-rose-600">*</span>
+          </label>
+          <input id="prodImage" type="url" formControlName="imageUrl" placeholder="https://images.unsplash.com/..."
+            class="w-full px-3.5 py-2 rounded-lg border border-gray-300 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]" />
+          @if (productForm.get('imageUrl')?.value) {
+          <div class="mt-2 flex items-center gap-2">
+            <img [src]="productForm.get('imageUrl')?.value" alt="Preview"
+              class="w-10 h-10 rounded-lg object-cover border border-gray-200"
+              onerror="this.src='https://images.unsplash.com/photo-1542838132-92c53300491e?w=100&auto=format&fit=crop&q=60'" />
+            <span class="text-[11px] text-gray-500">Image preview</span>
+          </div>
+          }
+        </div>
+
+        <!-- In-stock Toggle Option -->
+        <div class="pt-2 flex items-center justify-between p-3 rounded-lg bg-gray-50 border border-gray-200">
+          <div>
+            <span class="text-xs font-semibold text-gray-900 block">Available in store</span>
+            <span class="text-[11px] text-gray-500">Allow customers to add this product to cart</span>
+          </div>
+          <button type="button" role="switch" (click)="toggleFormInStock()"
+            [attr.aria-checked]="productForm.get('inStock')?.value"
+            class="relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]"
+            [ngClass]="productForm.get('inStock')?.value ? 'bg-[#FF9500]' : 'bg-gray-300'">
+            <span
+              class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+              [ngClass]="productForm.get('inStock')?.value ? 'translate-x-4' : 'translate-x-0'"></span>
+          </button>
+        </div>
+
+        <!-- Modal Actions -->
+        <div class="pt-4 border-t border-gray-200 flex items-center justify-end gap-3">
+          <button type="button" (click)="closeFormModal()"
+            class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs font-semibold transition-colors focus-visible:outline-none">
+            Cancel
+          </button>
+          <button type="submit" [disabled]="productForm.invalid || isSubmitting()"
+            class="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FF9500] to-[#FF4D00] hover:from-[#e08500] hover:to-[#e04000] text-white text-xs font-bold transition-colors disabled:opacity-60 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]">
+            {{ editingProduct() ? 'Update product' : 'Create product' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+  }
+
+  <!-- ================= CONFIRM DELETE DIALOG ================= -->
+  @if (productToDelete(); as p) {
+  <div class="fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-[1px] flex items-center justify-center p-4"
+    role="dialog" aria-modal="true">
+    <div class="bg-white rounded-xl border border-gray-200 max-w-sm w-full p-6 text-center space-y-4 shadow-xl">
+      <div class="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+      </div>
+      <div>
+        <h3 class="text-base font-bold text-gray-900">Delete product?</h3>
+        <p class="text-xs text-gray-500 mt-1">
+          Are you sure you want to remove <span class="font-semibold text-gray-800">{{ p.name }}</span> from EBUYZY
+          inventory?
+        </p>
+      </div>
+      <div class="flex gap-2.5 pt-2">
+        <button type="button" (click)="productToDelete.set(null)"
+          class="flex-1 py-2 rounded-lg border border-gray-300 text-gray-700 text-xs font-semibold hover:bg-gray-50">
+          Cancel
+        </button>
+        <button type="button" (click)="executeDelete(p.id)"
+          class="flex-1 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold">
+          Delete
+        </button>
+      </div>
+    </div>
+  </div>
+  }
+</div>

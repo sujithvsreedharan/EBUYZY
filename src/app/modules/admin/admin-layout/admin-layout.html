@@ -1,0 +1,165 @@
+<div
+    class="min-h-screen bg-[#f9fafb] dark:bg-[#0b1320] flex flex-col md:flex-row text-gray-900 dark:text-gray-100 antialiased font-sans transition-colors duration-200">
+    <!-- ================= DESKTOP SIDEBAR (>= 768px) ================= -->
+    <aside
+        class="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 z-30 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800"
+        aria-label="Admin sidebar">
+        <!-- Brand Header -->
+        <div class="h-16 flex items-center px-6 border-b border-gray-200 dark:border-gray-800">
+            <a routerLink="/admin/dashboard" class="flex items-center focus-visible:outline-none" title="EBUYZY Admin Dashboard">
+                <img src="logo/ebuyzy-nav-logo.png" alt="EBUYZY" class="h-8 sm:h-9 w-auto object-contain" />
+            </a>
+        </div>
+
+        <!-- Navigation Links -->
+        <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+            @for (item of visibleNavItems(); track item.route) {
+            <a [routerLink]="item.route"
+                routerLinkActive="bg-[#FFD600]/15 dark:bg-[#FFD600]/10 text-black dark:text-[#FFD600] font-bold border-l-4 border-[#FF9500]"
+                [routerLinkActiveOptions]="{ exact: item.route === '/admin/dashboard' }"
+                class="flex items-center justify-between px-3.5 py-2.5 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/80 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]">
+                <div class="flex items-center gap-3">
+                    <span [innerHTML]="item.icon" class="w-5 h-5 flex items-center justify-center"></span>
+                    <span>{{ item.label }}</span>
+                </div>
+            </a>
+            }
+        </nav>
+
+        <!-- Sidebar Footer: Delivery Radius Badge & Status -->
+        <div class="p-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-xs text-gray-500 dark:text-gray-400">Delivery coverage</span>
+                <span class="text-xs font-semibold text-gray-800 dark:text-gray-200">
+                    {{ settings()?.deliveryRadiusKm ?? 4.5 }} km radius
+                </span>
+            </div>
+            <div class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                <span class="w-2 h-2 rounded-full"
+                    [ngClass]="settings()?.isOpen ? 'bg-[#FF9500]' : 'bg-rose-500'"></span>
+                <span>Store is {{ settings()?.isOpen ? 'active & taking orders' : 'temporarily closed' }}</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ================= MAIN CONTENT WRAPPER ================= -->
+    <div class="flex-1 md:pl-64 flex flex-col min-w-0">
+        <!-- Top Bar -->
+        <header
+            class="h-16 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-20 flex items-center justify-between px-4 sm:px-6 transition-colors">
+            <!-- Left side: Mobile logo or breadcrumb -->
+            <div class="flex items-center gap-3">
+                <div class="md:hidden flex items-center">
+                    <a routerLink="/admin/dashboard" class="flex items-center focus-visible:outline-none" title="EBUYZY Admin">
+                        <img src="logo/ebuyzy-nav-logo.png" alt="EBUYZY" class="h-7 sm:h-8 w-auto object-contain" />
+                    </a>
+                </div>
+                <div class="hidden md:flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+                    <span>Admin portal</span>
+                    <span>/</span>
+                    <span class="text-gray-900 dark:text-white font-semibold">Kerala Store Operations</span>
+                </div>
+            </div>
+
+            <!-- Right side: Theme Toggle & Shop Open/Closed Toggle & Profile & Logout -->
+            <div class="flex items-center gap-2.5 sm:gap-3">
+                <!-- Theme Toggle Button (Light/Dark Mode) -->
+                <button type="button" (click)="themeService.toggleTheme()"
+                    [attr.aria-label]="themeService.isDarkMode() ? 'Switch to light mode' : 'Switch to dark mode'"
+                    [title]="themeService.isDarkMode() ? 'Switch to light mode' : 'Switch to dark mode'"
+                    class="p-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]">
+                    @if (themeService.isDarkMode()) {
+                    <!-- Sun Icon for Light Mode -->
+                    <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                    } @else {
+                    <!-- Moon Icon for Dark Mode -->
+                    <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                    </svg>
+                    }
+                </button>
+
+                <!-- Shop Open/Close quick toggle -->
+                <button type="button" (click)="toggleShopStatus()"
+                    [attr.aria-label]="settings()?.isOpen ? 'Close shop' : 'Open shop'"
+                    class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]"
+                    [ngClass]="
+                        settings()?.isOpen
+                          ? 'bg-[#FFD600]/20 text-black dark:text-[#FFD600] border-[#FFD600]/60 hover:bg-[#FFD600]/30'
+                          : 'bg-rose-50 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border-rose-200 dark:border-rose-800 hover:bg-rose-100 dark:hover:bg-rose-900/60'
+                    ">
+                    <span class="w-2 h-2 rounded-full"
+                        [ngClass]="settings()?.isOpen ? 'bg-[#FF9500]' : 'bg-rose-600 dark:bg-rose-400'"></span>
+                    <span class="hidden xs:inline">{{ settings()?.isOpen ? 'Shop open' : 'Shop closed' }}</span>
+                </button>
+
+                <!-- Admin / Sub-Admin Profile details -->
+                <div class="hidden sm:flex flex-col text-right">
+                    <div class="flex items-center gap-1.5 justify-end">
+                        <span class="text-xs font-bold text-gray-900 dark:text-white">{{ authService.currentUser()?.name ?? 'Store Manager' }}</span>
+                        @if (authService.isDeliveryPerson()) {
+                        <span class="px-1.5 py-0.2 rounded text-[10px] font-black bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
+                            🛵 Delivery Partner
+                        </span>
+                        } @else if (authService.isSubAdmin()) {
+                        <span class="px-1.5 py-0.2 rounded text-[10px] font-black bg-[#FFD600]/20 text-black dark:text-[#FFD600] border border-[#FFD600]/60">
+                            Sub-Admin
+                        </span>
+                        } @else {
+                        <span class="px-1.5 py-0.2 rounded text-[10px] font-black bg-black text-[#FFD600] border border-[#FFD600]/40">
+                            Super Admin
+                        </span>
+                        }
+                    </div>
+                    <span class="text-[11px] text-gray-500 dark:text-gray-400">
+                        {{ authService.currentUser()?.roleTitle || (authService.isDeliveryPerson() ? 'Kakkanad Express Delivery' : (authService.isSubAdmin() ? 'Order & Operations Staff' : 'Full Store Owner')) }}
+                    </span>
+                </div>
+
+                <!-- Logout button -->
+                <button type="button" (click)="logout()" aria-label="Logout of admin portal" title="Logout"
+                    class="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Route view container (with bottom padding on mobile for nav bar) -->
+        <main class="flex-1 p-4 sm:p-6 lg:p-8 pb-24 md:pb-8 max-w-7xl w-full mx-auto space-y-4">
+            @if (accessDeniedNotice()) {
+            <div role="alert"
+                class="p-4 rounded-xl bg-[#FFD600]/20 border border-[#FFD600]/60 text-black dark:text-[#FFD600] text-xs sm:text-sm font-bold flex items-center justify-between shadow-xs animate-in fade-in">
+                <div class="flex items-center gap-2">
+                    <span class="text-base">⚠️</span>
+                    <span>{{ accessDeniedNotice() }}</span>
+                </div>
+                <button type="button" (click)="dismissNotice()"
+                    class="p-1 text-gray-500 hover:text-black dark:hover:text-white rounded text-xs font-bold">
+                    ✕ Dismiss
+                </button>
+            </div>
+            }
+            <router-outlet></router-outlet>
+        </main>
+    </div>
+
+    <!-- ================= MOBILE BOTTOM NAVIGATION (< 768px) ================= -->
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 px-2 py-1.5 flex items-center justify-around transition-colors"
+        aria-label="Mobile navigation">
+        @for (item of visibleMobileNavItems(); track item.route) {
+        <a [routerLink]="item.route" routerLinkActive="text-[#FF9500] dark:text-[#FFD600] font-bold"
+            [routerLinkActiveOptions]="{ exact: item.route === '/admin/dashboard' }"
+            class="flex flex-col items-center justify-center py-1 px-2 text-[11px] text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white focus-visible:outline-none transition-colors">
+            <span [innerHTML]="item.icon" class="w-5 h-5 flex items-center justify-center mb-0.5"></span>
+            <span>{{ item.label }}</span>
+        </a>
+        }
+    </nav>
+</div>

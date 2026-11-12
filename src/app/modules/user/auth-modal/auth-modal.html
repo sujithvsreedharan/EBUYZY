@@ -1,0 +1,206 @@
+@if (authService.isAuthModalOpen()) {
+<!-- Pop-up Modal Backdrop -->
+<div
+  class="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150"
+  role="dialog" aria-modal="true" aria-labelledby="auth-modal-title" (click)="close()">
+  <!-- Modal Card -->
+  <div
+    class="relative w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-2xl p-5 sm:p-7 space-y-4 sm:space-y-5 animate-in zoom-in-95 duration-200 text-gray-900 dark:text-gray-100 max-h-[90vh] overflow-y-auto"
+    (click)="$event.stopPropagation()">
+    <!-- Header: Logo, Title, and Close Button -->
+    <div class="flex items-start justify-between">
+      <div class="flex items-center gap-2.5">
+        <div
+          class="w-9 h-9 rounded-lg bg-[#000000] text-[#FFD600] flex items-center justify-center font-black text-base shadow-xs">
+          E
+        </div>
+        <div>
+          <h2 id="auth-modal-title" class="text-base font-bold text-gray-900 dark:text-white leading-tight">
+            {{ authService.authModalMode() === 'signin' ? 'Sign in to EBUYZY' : 'Create an Account' }}
+          </h2>
+          <p class="text-xs text-gray-500 dark:text-gray-400">Kerala Hyperlocal Grocery Delivery</p>
+        </div>
+      </div>
+
+      <button type="button" (click)="close()" aria-label="Close dialog"
+        class="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Context Notification (e.g. Checkout Prompt) -->
+    @if (authService.authModalMessage()) {
+    <div
+      class="p-3 rounded-xl bg-[#FFD600]/20 border border-[#FFD600]/50 text-black dark:text-[#FFD600] text-xs flex items-start gap-2">
+      <svg class="w-4 h-4 text-[#FF9500] shrink-0 mt-0.5" fill="none" stroke="currentColor"
+        viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <span class="font-medium">{{ authService.authModalMessage() }}</span>
+    </div>
+    }
+
+    <!-- Mode Switcher Tabs -->
+    <div class="flex rounded-xl bg-gray-100 dark:bg-gray-800 p-1 text-xs font-bold" role="tablist">
+      <button type="button" role="tab" (click)="switchMode('signin')"
+        [attr.aria-selected]="authService.authModalMode() === 'signin'"
+        class="flex-1 py-2 text-center rounded-lg transition-colors focus-visible:outline-none"
+        [ngClass]="authService.authModalMode() === 'signin' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-xs' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'">
+        Sign in
+      </button>
+      <button type="button" role="tab" (click)="switchMode('signup')"
+        [attr.aria-selected]="authService.authModalMode() === 'signup'"
+        class="flex-1 py-2 text-center rounded-lg transition-colors focus-visible:outline-none"
+        [ngClass]="authService.authModalMode() === 'signup' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-xs' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'">
+        Sign up (New user)
+      </button>
+    </div>
+
+    <!-- Error Message Banner -->
+    @if (errorMessage()) {
+    <div
+      class="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/70 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs flex items-start gap-2">
+      <svg class="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" fill="none" stroke="currentColor"
+        viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <span class="font-medium">{{ errorMessage() }}</span>
+    </div>
+    }
+
+    <!-- TAB 1: SIGN IN FORM -->
+    @if (authService.authModalMode() === 'signin') {
+    <form [formGroup]="signInForm" (ngSubmit)="onSignIn()" class="space-y-4">
+      <!-- Identifier: Email or Phone -->
+      <div>
+        <label for="signin-identifier" class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+          Phone number or Email
+        </label>
+        <input id="signin-identifier" type="text" formControlName="identifier"
+          placeholder="e.g. 9847123450 or admin@ebuyzy.in" autocomplete="username"
+          class="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500] focus-visible:border-transparent transition-colors" />
+        @if (signInForm.get('identifier')?.touched && signInForm.get('identifier')?.invalid) {
+        <p class="text-[11px] text-rose-600 dark:text-rose-400 mt-1">Please enter your registered phone or email
+          address.</p>
+        }
+      </div>
+
+      <!-- Password with eye toggle -->
+      <div>
+        <div class="flex items-center justify-between mb-1">
+          <label for="signin-password" class="block text-xs font-semibold text-gray-700 dark:text-gray-300">
+            Password
+          </label>
+          <button type="button" (click)="togglePasswordVisibility()" tabindex="-1"
+            class="text-[11px] text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">
+            {{ showPassword() ? 'Hide' : 'Show' }}
+          </button>
+        </div>
+        <div class="relative">
+          <input id="signin-password" [type]="showPassword() ? 'text' : 'password'" formControlName="password"
+            placeholder="••••••••" autocomplete="current-password"
+            class="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500] focus-visible:border-transparent transition-colors" />
+        </div>
+        @if (signInForm.get('password')?.touched && signInForm.get('password')?.invalid) {
+        <p class="text-[11px] text-rose-600 dark:text-rose-400 mt-1">Password is required (min 4 characters).</p>
+        }
+      </div>
+
+      <!-- Submit Button -->
+      <button type="submit" [disabled]="isLoading()"
+        class="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#FF9500] to-[#FF4D00] hover:from-[#e08500] hover:to-[#e04000] text-white font-bold text-xs transition-colors shadow-xs flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500] focus-visible:ring-offset-2 disabled:opacity-60">
+        @if (isLoading()) {
+        <svg class="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24" fill="none">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+        </svg>
+        <span>Verifying...</span>
+        } @else {
+        <span>Sign in</span>
+        }
+      </button>
+
+      <!-- Quick Fill Demo Badges -->
+      <div class="pt-2 border-t border-gray-100 dark:border-gray-800">
+        <p class="text-[11px] text-gray-400 dark:text-gray-500 text-center mb-2 font-medium">Quick Demo Autofill:</p>
+        <div class="grid grid-cols-2 gap-2 text-[11px]">
+          <button type="button" (click)="fillAdminDemo()"
+            class="py-1.5 px-2 rounded-lg border border-[#FFD600]/60 bg-[#FFD600]/20 hover:bg-[#FFD600]/30 text-black dark:text-[#FFD600] text-center transition-colors font-bold">
+            🔐 Admin Access
+          </button>
+          <button type="button" (click)="fillCustomerDemo()"
+            class="py-1.5 px-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 text-center transition-colors font-semibold">
+            👤 Customer User
+          </button>
+        </div>
+      </div>
+    </form>
+    }
+
+    <!-- TAB 2: SIGN UP FORM -->
+    @if (authService.authModalMode() === 'signup') {
+    <form [formGroup]="signUpForm" (ngSubmit)="onSignUp()" class="space-y-4">
+      <!-- Full Name -->
+      <div>
+        <label for="signup-name" class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+          Full Name
+        </label>
+        <input id="signup-name" type="text" formControlName="name" placeholder="e.g. Sreelakshmi Mohan"
+          class="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500] focus-visible:border-transparent transition-colors" />
+        @if (signUpForm.get('name')?.touched && signUpForm.get('name')?.invalid) {
+        <p class="text-[11px] text-rose-600 dark:text-rose-400 mt-1">Please enter your full name.</p>
+        }
+      </div>
+
+      <!-- Phone or Email -->
+      <div>
+        <label for="signup-identifier" class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+          Mobile Number (10 digits) or Email
+        </label>
+        <input id="signup-identifier" type="text" formControlName="identifier" placeholder="e.g. 9847123450"
+          class="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500] focus-visible:border-transparent transition-colors" />
+        @if (signUpForm.get('identifier')?.touched && signUpForm.get('identifier')?.invalid) {
+        <p class="text-[11px] text-rose-600 dark:text-rose-400 mt-1">Please enter a valid mobile number or email.</p>
+        }
+      </div>
+
+      <!-- Password -->
+      <div>
+        <label for="signup-password" class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+          Create Password
+        </label>
+        <input id="signup-password" [type]="showPassword() ? 'text' : 'password'" formControlName="password"
+          placeholder="Minimum 4 characters"
+          class="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500] focus-visible:border-transparent transition-colors" />
+        @if (signUpForm.get('password')?.touched && signUpForm.get('password')?.invalid) {
+        <p class="text-[11px] text-rose-600 dark:text-rose-400 mt-1">Password must be at least 4 characters.</p>
+        }
+      </div>
+
+      <!-- Submit Button -->
+      <button type="submit" [disabled]="isLoading()"
+        class="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#FF9500] to-[#FF4D00] hover:from-[#e08500] hover:to-[#e04000] text-white font-bold text-xs transition-colors shadow-xs flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500] focus-visible:ring-offset-2 disabled:opacity-60">
+        @if (isLoading()) {
+        <svg class="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24" fill="none">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+        </svg>
+        <span>Creating Account...</span>
+        } @else {
+        <span>Create Account & Continue</span>
+        }
+      </button>
+    </form>
+    }
+
+    <!-- Bottom microcopy -->
+    <div class="text-[11px] text-gray-400 dark:text-gray-500 text-center">
+      <span>By continuing, you agree to EBUYZY's terms of service and hyperlocal delivery policies in Kerala.</span>
+    </div>
+  </div>
+</div>
+}

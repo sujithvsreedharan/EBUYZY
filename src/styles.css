@@ -1,0 +1,127 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #f9fafb;
+    color: #111827;
+    margin: 0;
+    padding: 0;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Prevent 300ms double-tap zoom delay on mobile touch targets */
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    touch-action: manipulation;
+  }
+
+  .dark body,
+  html.dark body {
+    background-color: #0b1320;
+    color: #f1f5f9;
+  }
+}
+
+/* EBUYZY brand palette: Black, Bright Yellow, Orange, Deep Orange & White */
+:root {
+  --color-black: #000000;
+  --color-yellow: #FFD600;
+  --color-orange: #FF9500;
+  --color-orange-hover: #e08500;
+  --color-deep-orange: #FF4D00;
+  --color-white: #FFFFFF;
+  --card-radius: 12px;
+
+  /* Primary action shortcuts */
+  --primary-orange: #FF9500;
+  --primary-hover: #e08500;
+  --primary-gradient: linear-gradient(135deg, #FF9500 0%, #FF4D00 100%);
+  --accent-yellow: #FFD600;
+}
+
+.dark {
+  --color-black: #000000;
+  --color-yellow: #FFD600;
+  --color-orange: #FF9500;
+  --color-deep-orange: #FF4D00;
+}
+
+/* ============================================================================
+   GLOBAL DARK MODE THEME ENHANCEMENTS
+   Ensures seamless, high-contrast dark theme across both Storefront and Admin
+   ============================================================================ */
+
+html.dark .bg-white {
+  background-color: #0f172a !important;
+  color: #f1f5f9;
+}
+
+html.dark .bg-gray-50 {
+  background-color: #1e293b !important;
+}
+
+html.dark .bg-gray-100 {
+  background-color: #334155 !important;
+}
+
+html.dark .border-gray-200,
+html.dark .border-gray-100 {
+  border-color: #334155 !important;
+}
+
+html.dark .border-gray-300 {
+  border-color: #475569 !important;
+}
+
+html.dark .text-gray-900,
+html.dark .text-gray-800 {
+  color: #f8fafc !important;
+}
+
+html.dark .text-gray-700,
+html.dark .text-gray-600 {
+  color: #cbd5e1 !important;
+}
+
+html.dark .text-gray-500 {
+  color: #94a3b8 !important;
+}
+
+html.dark .text-gray-400 {
+  color: #64748b !important;
+}
+
+html.dark input:not([type='checkbox']):not([type='radio']),
+html.dark textarea,
+html.dark select {
+  background-color: #1e293b;
+  color: #f8fafc;
+  border-color: #475569;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #64748b;
+}
+
+html.dark tr:hover {
+  background-color: rgba(30, 41, 59, 0.7) !important;
+}
+
+html.dark .divide-gray-100> :not([hidden])~ :not([hidden]),
+html.dark .divide-gray-200> :not([hidden])~ :not([hidden]) {
+  border-color: #334155 !important;
+}

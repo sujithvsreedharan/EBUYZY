@@ -1,0 +1,761 @@
+<div class="space-y-8">
+  <!-- Breadcrumb -->
+  <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+    <a routerLink="/" class="hover:text-gray-900 dark:hover:text-white transition-colors">Home</a>
+    <span>&rsaquo;</span>
+    <span class="font-bold text-gray-900 dark:text-white">Customer Account &amp; Orders</span>
+  </div>
+
+  <!-- ================= GUEST NOT LOGGED IN STATE ================= -->
+  @if (!authService.isAuthenticated()) {
+  <div
+    class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-8 sm:p-12 text-center max-w-2xl mx-auto space-y-6 transition-colors shadow-2xs">
+    <div
+      class="w-16 h-16 rounded-2xl bg-[#FFD600]/20 dark:bg-[#FFD600]/10 text-black dark:text-[#FFD600] flex items-center justify-center mx-auto text-3xl border border-[#FFD600]/40">
+      👤
+    </div>
+
+    <div class="space-y-2">
+      <h1 class="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+        Sign In to Access Your Account
+      </h1>
+      <p class="text-sm text-gray-600 dark:text-gray-300 max-w-md mx-auto leading-relaxed">
+        Log in with your phone or email to track active 30-45 minute Kakkanad deliveries, re-order fresh Kerala
+        groceries, and view itemized bills.
+      </p>
+    </div>
+
+    <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+      <button type="button" (click)="openSignInModal()"
+        class="w-full sm:w-auto px-6 py-3 rounded-xl bg-gradient-to-r from-[#FF9500] to-[#FF4D00] hover:from-[#e08500] hover:to-[#e04000] text-white text-sm font-bold transition-all shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]">
+        Sign In / Register
+      </button>
+      <a routerLink="/products"
+        class="w-full sm:w-auto px-6 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 text-sm font-bold transition-colors">
+        Browse Fresh Produce
+      </a>
+    </div>
+
+    <!-- Quick Demo Account Hint -->
+    <div
+      class="pt-4 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-500 dark:text-gray-400 flex items-center justify-center gap-2">
+      <span>⚡ Quick test login:</span>
+      <button type="button" (click)="openSignInModal()"
+        class="font-bold text-[#FF9500] dark:text-[#FFD600] hover:underline">
+        Demo Customer (9847123450 / user123)
+      </button>
+    </div>
+  </div>
+  } @else {
+  <!-- ================= LOGGED IN CUSTOMER DASHBOARD ================= -->
+  <div class="space-y-6">
+    <!-- Profile Header Summary Banner -->
+    <div
+      class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-6 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 transition-colors">
+      <div class="flex items-center gap-4 sm:gap-5">
+        <!-- Initial Avatar -->
+        <div
+          class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-r from-[#FF9500] to-[#FF4D00] text-white flex items-center justify-center font-black text-2xl shrink-0 shadow-2xs">
+          {{ (authService.currentUser()?.name || 'U').charAt(0).toUpperCase() }}
+        </div>
+
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <h1 class="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+              {{ authService.currentUser()?.name }}
+            </h1>
+            <span
+              class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#FFD600]/20 dark:bg-[#FFD600]/10 text-black dark:text-[#FFD600] border border-[#FFD600]/40 uppercase tracking-wider">
+              Kerala Customer
+            </span>
+          </div>
+
+          <!-- Contact Specs -->
+          <div class="flex items-center gap-4 text-xs text-gray-600 dark:text-gray-400 mt-1.5 flex-wrap">
+            <span class="flex items-center gap-1">
+              <span>📱</span>
+              <span>+91 {{ authService.currentUser()?.phone || '9847123450' }}</span>
+            </span>
+            <span class="text-gray-300 dark:text-gray-700">&bull;</span>
+            <span class="flex items-center gap-1">
+              <span>✉️</span>
+              <span>{{ authService.currentUser()?.email || 'customer@ebuyzy.in' }}</span>
+            </span>
+            <span class="text-gray-300 dark:text-gray-700 hidden sm:inline">&bull;</span>
+            <span class="hidden sm:inline-flex items-center gap-1 text-[#FF9500] dark:text-[#FFD600] font-semibold">
+              <span>📍</span>
+              <span>Kakkanad 3-5 km Express Zone</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Quick Action: Logout & Live Cart -->
+      <div class="flex items-center gap-2.5 self-start md:self-center shrink-0">
+        <button type="button" (click)="logout()"
+          class="px-3.5 py-2 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-rose-300 dark:hover:border-rose-800 text-gray-700 dark:text-gray-300 hover:text-rose-600 dark:hover:text-rose-400 text-xs font-bold transition-colors flex items-center gap-1.5"
+          title="Sign out of your account">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          <span>Sign out</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Success / Toast Notifications -->
+    @if (reorderSuccessMsg()) {
+    <div
+      class="p-4 rounded-xl bg-[#FFD600]/20 dark:bg-[#FFD600]/10 border border-[#FFD600]/60 text-black dark:text-[#FFD600] text-xs font-bold flex items-center justify-between gap-3 animate-fadeIn">
+      <div class="flex items-center gap-2">
+        <span>🛒</span>
+        <span>{{ reorderSuccessMsg() }}</span>
+      </div>
+      <button type="button" (click)="reorderSuccessMsg.set(null)"
+        class="text-black dark:text-white hover:underline">&times;</button>
+    </div>
+    }
+
+    @if (profileSuccessMsg()) {
+    <div
+      class="p-4 rounded-xl bg-[#FFD600]/20 dark:bg-[#FFD600]/10 border border-[#FFD600]/60 text-black dark:text-[#FFD600] text-xs font-bold flex items-center justify-between gap-3 animate-fadeIn">
+      <div class="flex items-center gap-2">
+        <span>✓</span>
+        <span>{{ profileSuccessMsg() }}</span>
+      </div>
+      <button type="button" (click)="profileSuccessMsg.set(null)"
+        class="text-black dark:text-white hover:underline">&times;</button>
+    </div>
+    }
+
+    <!-- ================= TAB SELECTION BAR ================= -->
+    <div
+      class="flex items-center gap-2 border-b border-gray-200 dark:border-gray-800 pb-2 overflow-x-auto scrollbar-none"
+      role="tablist">
+      <!-- Tab 1: Orders & Tracking -->
+      <button type="button" role="tab" (click)="selectTab('orders')" [attr.aria-selected]="activeTab() === 'orders'"
+        class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-colors flex items-center gap-2 focus-visible:outline-none"
+        [ngClass]="
+            activeTab() === 'orders'
+              ? 'bg-gradient-to-r from-[#FF9500] to-[#FF4D00] text-white shadow-xs font-bold'
+              : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+          ">
+        <span>📦 My Orders &amp; Live Tracking</span>
+        <span class="px-1.5 py-0.2 rounded text-[10px] font-extrabold"
+          [ngClass]="activeTab() === 'orders' ? 'bg-white/20 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'">
+          {{ totalOrdersCount() }}
+        </span>
+      </button>
+
+      <!-- Tab 2: Profile & Saved Delivery Addresses -->
+      <button type="button" role="tab" (click)="selectTab('profile')" [attr.aria-selected]="activeTab() === 'profile'"
+        class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-colors flex items-center gap-2 focus-visible:outline-none"
+        [ngClass]="
+            activeTab() === 'profile'
+              ? 'bg-gradient-to-r from-[#FF9500] to-[#FF4D00] text-white shadow-xs font-bold'
+              : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+          ">
+        <span>👤 Profile &amp; Saved Addresses</span>
+      </button>
+    </div>
+
+    <!-- ================= TAB CONTENT 1: ORDERS & LIVE TRACKING ================= -->
+    @if (activeTab() === 'orders') {
+    <div class="space-y-5">
+      <!-- Orders Toolbar: Filter Tabs & Search -->
+      <div
+        class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 transition-colors">
+        <!-- Filter Pills -->
+        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+          <button type="button" (click)="setStatusFilter('all')"
+            class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors" [ngClass]="
+                  statusFilter() === 'all'
+                    ? 'bg-gradient-to-r from-[#FF9500] to-[#FF4D00] text-white font-bold'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                ">
+            All ({{ totalOrdersCount() }})
+          </button>
+
+          <button type="button" (click)="setStatusFilter('active')"
+            class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors flex items-center gap-1"
+            [ngClass]="
+                  statusFilter() === 'active'
+                    ? 'bg-gradient-to-r from-[#FF9500] to-[#FF4D00] text-white font-bold'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                ">
+            <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+            <span>Active &amp; On the Way ({{ activeOrdersCount() }})</span>
+          </button>
+
+          <button type="button" (click)="setStatusFilter('Delivered')"
+            class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors" [ngClass]="
+                  statusFilter() === 'Delivered'
+                    ? 'bg-gradient-to-r from-[#FF9500] to-[#FF4D00] text-white font-bold'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                ">
+            Delivered ({{ deliveredOrdersCount() }})
+          </button>
+        </div>
+
+        <!-- Search Orders Input -->
+        <div class="relative w-full md:w-64">
+          <input type="text" [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)"
+            placeholder="Search by order # or item..."
+            class="w-full pl-8 pr-7 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#FF9500]" />
+          <span class="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-gray-400 text-xs">
+            🔍
+          </span>
+          @if (searchQuery()) {
+          <button type="button" (click)="searchQuery.set('')"
+            class="absolute inset-y-0 right-0 pr-2 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xs">
+            &times;
+          </button>
+          }
+        </div>
+      </div>
+
+      <!-- Orders List -->
+      <div class="space-y-4">
+        @for (order of filteredOrders(); track order.id) {
+        <div
+          class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden transition-all shadow-2xs hover:border-gray-300 dark:hover:border-gray-700">
+          <!-- Order Card Top Bar -->
+          <div
+            class="p-4 sm:p-5 border-b border-gray-100 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-800/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="space-y-1">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="font-mono text-sm sm:text-base font-extrabold text-gray-900 dark:text-white">
+                  #{{ order.orderNumber }}
+                </span>
+                <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold border"
+                  [ngClass]="getStatusBadgeClass(order.status)">
+                  {{ order.status }}
+                </span>
+                @if (order.status === 'Out for delivery') {
+                <span
+                  class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-purple-600 text-white flex items-center gap-1 shadow-xs">
+                  <span>⚡</span>
+                  <span>Arriving in 15-20 mins</span>
+                </span>
+                }
+              </div>
+              <p class="text-xs text-gray-500 dark:text-gray-400">
+                Placed on {{ formatDate(order.createdAt) }} &bull; {{ order.items.length }} {{ order.items.length === 1
+                ? 'produce item' : 'produce items' }}
+              </p>
+            </div>
+
+            <!-- Amount & Quick Track Button -->
+            <div class="flex items-center justify-between sm:justify-end gap-3">
+              <div class="text-right">
+                <span class="text-xs text-gray-500 dark:text-gray-400 block font-medium">Grand Total</span>
+                <span class="text-base sm:text-lg font-black text-gray-900 dark:text-white">
+                  ₹{{ order.total }}
+                </span>
+              </div>
+
+              <button type="button" (click)="openTrackingModal(order)"
+                class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#FF9500] to-[#FF4D00] hover:from-[#e08500] hover:to-[#e04000] text-white text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs">
+                <span>Live Track</span>
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- ================= LIVE 4-STEP ORDER STATUS PROGRESS BAR ================= -->
+          @if (order.status !== 'Cancelled') {
+          <div class="px-4 sm:px-6 py-5 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800">
+            <div class="relative max-w-2xl mx-auto">
+              <!-- Connecting Line -->
+              <div class="absolute top-3.5 left-4 right-4 h-1 bg-gray-200 dark:bg-gray-800 -z-0">
+                <div class="h-full bg-[#FF9500] dark:bg-[#FFD600] transition-all duration-500" [style.width]="
+                            getDeliveryStepIndex(order.status) === 1 ? '10%' :
+                            getDeliveryStepIndex(order.status) === 2 ? '40%' :
+                            getDeliveryStepIndex(order.status) === 3 ? '75%' : '100%'
+                          "></div>
+              </div>
+
+              <!-- 4 Milestone Nodes -->
+              <div class="relative z-10 flex items-center justify-between">
+                <!-- Step 1: Placed -->
+                <div class="flex flex-col items-center text-center">
+                  <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors"
+                    [ngClass]="
+                              getDeliveryStepIndex(order.status) >= 1
+                                ? 'bg-[#FF9500] text-white ring-4 ring-[#FFD600]/30'
+                                : 'bg-gray-200 dark:bg-gray-800 text-gray-500'
+                            ">
+                    ✓
+                  </div>
+                  <span class="text-[11px] font-bold mt-1 text-gray-900 dark:text-white">Placed</span>
+                  <span class="text-[9px] text-gray-500 hidden sm:block">Confirmed</span>
+                </div>
+
+                <!-- Step 2: Packed at Kakkanad -->
+                <div class="flex flex-col items-center text-center">
+                  <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors"
+                    [ngClass]="
+                              getDeliveryStepIndex(order.status) >= 2
+                                ? 'bg-[#FF9500] text-white ring-4 ring-[#FFD600]/30'
+                                : 'bg-gray-200 dark:bg-gray-800 text-gray-500'
+                            ">
+                    {{ getDeliveryStepIndex(order.status) >= 2 ? '✓' : '2' }}
+                  </div>
+                  <span class="text-[11px] font-bold mt-1"
+                    [ngClass]="getDeliveryStepIndex(order.status) >= 2 ? 'text-gray-900 dark:text-white' : 'text-gray-400'">
+                    Packed
+                  </span>
+                  <span class="text-[9px] text-gray-500 hidden sm:block">Kakkanad Hub</span>
+                </div>
+
+                <!-- Step 3: Out for Delivery -->
+                <div class="flex flex-col items-center text-center">
+                  <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors"
+                    [ngClass]="
+                              getDeliveryStepIndex(order.status) >= 3
+                                ? 'bg-purple-600 text-white ring-4 ring-purple-100 dark:ring-purple-950/80 animate-pulse'
+                                : 'bg-gray-200 dark:bg-gray-800 text-gray-500'
+                            ">
+                    {{ getDeliveryStepIndex(order.status) >= 4 ? '✓' : '🛵' }}
+                  </div>
+                  <span class="text-[11px] font-bold mt-1"
+                    [ngClass]="getDeliveryStepIndex(order.status) >= 3 ? 'text-purple-600 dark:text-purple-400 font-extrabold' : 'text-gray-400'">
+                    On the Way
+                  </span>
+                  <span class="text-[9px] text-gray-500 hidden sm:block">Express Pilot</span>
+                </div>
+
+                <!-- Step 4: Delivered -->
+                <div class="flex flex-col items-center text-center">
+                  <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors"
+                    [ngClass]="
+                              getDeliveryStepIndex(order.status) >= 4
+                                ? 'bg-[#FF9500] text-white ring-4 ring-[#FFD600]/30'
+                                : 'bg-gray-200 dark:bg-gray-800 text-gray-500'
+                            ">
+                    🏡
+                  </div>
+                  <span class="text-[11px] font-bold mt-1"
+                    [ngClass]="getDeliveryStepIndex(order.status) >= 4 ? 'text-[#FF9500] dark:text-[#FFD600]' : 'text-gray-400'">
+                    Delivered
+                  </span>
+                  <span class="text-[9px] text-gray-500 hidden sm:block">Doorstep</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          }
+
+          <!-- Delivery Address & Actions Row -->
+          <div class="p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <!-- Destination Details -->
+            <div class="space-y-1 text-xs">
+              <span class="font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                <span>📍</span>
+                <span>Delivery Address:</span>
+              </span>
+              <p class="text-gray-600 dark:text-gray-300">
+                {{ order.customer.address }}
+                @if (order.customer.landmark) {
+                <span class="text-gray-500 italic">({{ order.customer.landmark }})</span>
+                }
+              </p>
+              <p class="text-gray-500 dark:text-gray-400">
+                Recipient: <strong>{{ order.customer.name }}</strong> &bull; +91 {{ order.customer.phone }}
+              </p>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center gap-2 flex-wrap">
+              <!-- Toggle Produce Items Bill -->
+              <button type="button" (click)="toggleOrderExpanded(order.id)"
+                class="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-semibold transition-colors flex items-center gap-1">
+                <span>{{ isOrderExpanded(order.id) ? 'Hide Items' : 'View ' + order.items.length + ' Items' }}</span>
+                <svg class="w-3.5 h-3.5 transition-transform" [ngClass]="{ 'rotate-180': isOrderExpanded(order.id) }"
+                  fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              <!-- Re-Order Button (One click adds items to cart) -->
+              <button type="button" (click)="reorderItems(order)"
+                class="px-3 py-1.5 rounded-lg border border-[#FF9500]/50 bg-[#FF9500]/10 hover:bg-[#FF9500]/20 text-[#FF9500] dark:text-[#FFD600] text-xs font-bold transition-colors flex items-center gap-1.5"
+                title="Add all items from this order into your basket">
+                <span>🛒 Re-order</span>
+              </button>
+
+              <!-- WhatsApp Order Support -->
+              <a [href]="getWhatsAppHelpUrl(order)" target="_blank" rel="noopener noreferrer"
+                class="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-[#FF9500] bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs font-semibold transition-colors flex items-center gap-1"
+                title="Chat on WhatsApp about this order">
+                <svg class="w-3.5 h-3.5 fill-current text-[#FF9500] dark:text-[#FFD600]" viewBox="0 0 24 24">
+                  <path
+                    d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z" />
+                </svg>
+                <span>Help</span>
+              </a>
+            </div>
+          </div>
+
+          <!-- ================= EXPANDABLE PRODUCE ITEMS INVOICE ================= -->
+          @if (isOrderExpanded(order.id)) {
+          <div
+            class="px-4 sm:px-6 py-4 bg-gray-50/80 dark:bg-gray-800/60 border-t border-gray-100 dark:border-gray-800 animate-fadeIn space-y-3">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+              Itemized Grocery Basket
+            </h4>
+
+            <div class="divide-y divide-gray-200 dark:divide-gray-700/60">
+              @for (item of order.items; track item.productId) {
+              <div class="py-2.5 flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2">
+                  <span
+                    class="w-6 h-6 rounded bg-white dark:bg-gray-700 flex items-center justify-center text-xs border border-gray-200 dark:border-gray-600">
+                    🥬
+                  </span>
+                  <div>
+                    <span class="font-bold text-gray-900 dark:text-white block">{{ item.productName }}</span>
+                    <span class="text-[10px] text-gray-500 dark:text-gray-400">{{ item.unit }} &bull; ₹{{ item.unitPrice
+                      }} each</span>
+                  </div>
+                </div>
+
+                <div class="text-right">
+                  <span class="text-gray-500 dark:text-gray-400 text-[11px]">Qty: <strong>{{ item.quantity
+                      }}</strong></span>
+                  <span class="font-extrabold text-gray-900 dark:text-white ml-3">₹{{ item.total }}</span>
+                </div>
+              </div>
+              }
+            </div>
+
+            <!-- Bill Breakdown -->
+            <div class="pt-2 border-t border-gray-200 dark:border-gray-700/80 space-y-1 text-xs">
+              <div class="flex justify-between text-gray-600 dark:text-gray-400">
+                <span>Items Subtotal:</span>
+                <span>₹{{ order.subtotal }}</span>
+              </div>
+              <div class="flex justify-between text-gray-600 dark:text-gray-400">
+                <span>Kakkanad Express Delivery Fee:</span>
+                <span>₹{{ order.deliveryFee }}</span>
+              </div>
+              <div
+                class="flex justify-between text-sm font-extrabold text-gray-900 dark:text-white pt-1 border-t border-gray-200 dark:border-gray-700">
+                <span>Total Paid (COD / UPI):</span>
+                <span class="text-[#FF9500] dark:text-[#FFD600]">₹{{ order.total }}</span>
+              </div>
+            </div>
+          </div>
+          }
+        </div>
+        } @empty {
+        <!-- Empty State -->
+        <div
+          class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-10 text-center space-y-4">
+          <div
+            class="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-800 text-gray-400 flex items-center justify-center mx-auto text-2xl">
+            🛒
+          </div>
+          <div class="space-y-1">
+            <h3 class="text-base font-bold text-gray-900 dark:text-white">
+              No Orders Found
+            </h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
+              You haven't placed any orders yet matching this criteria. Fresh Kerala produce is ready to be delivered to
+              Kakkanad in 30-45 minutes.
+            </p>
+          </div>
+          <div class="flex items-center justify-center gap-3 pt-2">
+            <a routerLink="/products"
+              class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#FF9500] to-[#FF4D00] hover:from-[#e08500] hover:to-[#e04000] text-white text-xs font-bold transition-colors shadow-xs">
+              Explore Produce Catalog
+            </a>
+            @if (!showDemoOrders()) {
+            <button type="button" (click)="showDemoOrders.set(true)"
+              class="px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-xs font-bold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+              Preview Sample Deliveries
+            </button>
+            }
+          </div>
+        </div>
+        }
+      </div>
+    </div>
+    }
+
+    <!-- ================= TAB CONTENT 2: PROFILE & SAVED ADDRESSES ================= -->
+    @if (activeTab() === 'profile') {
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- Profile Details Card -->
+      <div
+        class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-6 space-y-5 transition-colors shadow-2xs">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-base font-bold text-gray-900 dark:text-white">Personal Information</h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Your registered contact profile</p>
+          </div>
+
+          @if (!isEditingProfile()) {
+          <button type="button" (click)="isEditingProfile.set(true)"
+            class="text-xs font-bold text-[#FF9500] dark:text-[#FFD600] hover:underline flex items-center gap-1">
+            <span>Edit</span>
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
+          </button>
+          }
+        </div>
+
+        @if (!isEditingProfile()) {
+        <!-- Display View -->
+        <div class="space-y-3 text-xs">
+          <div class="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700/60">
+            <span class="text-gray-400 dark:text-gray-500 block text-[10px] uppercase font-bold">Full Name</span>
+            <span class="text-sm font-bold text-gray-900 dark:text-white">{{ authService.currentUser()?.name }}</span>
+          </div>
+
+          <div class="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700/60">
+            <span class="text-gray-400 dark:text-gray-500 block text-[10px] uppercase font-bold">Mobile Phone</span>
+            <span class="text-sm font-bold text-gray-900 dark:text-white font-mono">+91 {{
+              authService.currentUser()?.phone || '9847123450' }}</span>
+          </div>
+
+          <div class="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700/60">
+            <span class="text-gray-400 dark:text-gray-500 block text-[10px] uppercase font-bold">Email Address</span>
+            <span class="text-sm font-bold text-gray-900 dark:text-white">{{ authService.currentUser()?.email }}</span>
+          </div>
+        </div>
+        } @else {
+        <!-- Edit View -->
+        <div class="space-y-3.5">
+          @if (profileErrorMsg()) {
+          <p class="text-xs font-bold text-rose-600 dark:text-rose-400">{{ profileErrorMsg() }}</p>
+          }
+
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
+            <input type="text" [ngModel]="nameInput()" (ngModelChange)="nameInput.set($event)"
+              class="w-full px-3 py-2 text-xs rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#FF9500]" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">10-Digit Mobile
+              Phone</label>
+            <div class="flex">
+              <span
+                class="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-500 text-xs font-mono font-bold">
+                +91
+              </span>
+              <input type="tel" [ngModel]="phoneInput()" (ngModelChange)="phoneInput.set($event)" maxlength="10"
+                class="w-full px-3 py-2 text-xs rounded-r-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-mono focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#FF9500]" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Email Address</label>
+            <input type="email" [ngModel]="emailInput()" (ngModelChange)="emailInput.set($event)"
+              class="w-full px-3 py-2 text-xs rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#FF9500]" />
+          </div>
+
+          <div class="flex items-center gap-2 pt-2">
+            <button type="button" (click)="saveProfile()"
+              class="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FF9500] to-[#FF4D00] hover:from-[#e08500] hover:to-[#e04000] text-white text-xs font-bold transition-colors shadow-xs">
+              Save Changes
+            </button>
+            <button type="button" (click)="isEditingProfile.set(false)"
+              class="px-3.5 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-xs font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+              Cancel
+            </button>
+          </div>
+        </div>
+        }
+      </div>
+
+      <!-- Saved Delivery Address Card -->
+      <div
+        class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-6 space-y-5 transition-colors shadow-2xs">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-base font-bold text-gray-900 dark:text-white">Default Delivery Address</h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Used for sub-45 min Kakkanad deliveries</p>
+          </div>
+
+          @if (!isEditingAddress()) {
+          <button type="button" (click)="isEditingAddress.set(true)"
+            class="text-xs font-bold text-[#FF9500] dark:text-[#FFD600] hover:underline flex items-center gap-1">
+            <span>Change</span>
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
+          </button>
+          }
+        </div>
+
+        @if (!isEditingAddress()) {
+        <!-- Display Address View -->
+        <div
+          class="p-4 rounded-xl bg-orange-50/50 dark:bg-orange-950/20 border border-orange-200/60 dark:border-orange-800/40 space-y-2.5 text-xs">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-[#FF9500] dark:text-[#FFD600] flex items-center gap-1.5">
+              <span>📍</span>
+              <span>Primary Kakkanad Residence</span>
+            </span>
+            <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-gradient-to-r from-[#FF9500] to-[#FF4D00] text-white">Default</span>
+          </div>
+
+          <p class="text-gray-800 dark:text-gray-200 leading-relaxed font-medium">
+            {{ authService.currentUser()?.address || 'Flat 4B, Olive Greens, Infopark Road, Kakkanad, Kochi, Kerala
+            682042' }}
+          </p>
+
+          <div
+            class="pt-2 border-t border-orange-100 dark:border-orange-900/40 flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-400">
+            <span>Coverage: <strong>3-5 km Express Hub</strong></span>
+            <span class="text-[#FF9500] dark:text-[#FFD600] font-bold">⚡ Free above ₹150</span>
+          </div>
+        </div>
+        } @else {
+        <!-- Edit Address View -->
+        <div class="space-y-3.5">
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Complete Address (Flat /
+              House / Street)</label>
+            <textarea rows="2" [ngModel]="addressInput()" (ngModelChange)="addressInput.set($event)"
+              class="w-full px-3 py-2 text-xs rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#FF9500]"></textarea>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Locality</label>
+              <input type="text" [ngModel]="localityInput()" (ngModelChange)="localityInput.set($event)"
+                placeholder="e.g. Infopark, Padamugal"
+                class="w-full px-3 py-2 text-xs rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#FF9500]" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Postal Pincode</label>
+              <input type="text" [ngModel]="pincodeInput()" (ngModelChange)="pincodeInput.set($event)"
+                class="w-full px-3 py-2 text-xs rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-mono focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#FF9500]" />
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 pt-2">
+            <button type="button" (click)="saveAddress()"
+              class="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FF9500] to-[#FF4D00] hover:from-[#e08500] hover:to-[#e04000] text-white text-xs font-bold transition-colors shadow-xs">
+              Save Address
+            </button>
+            <button type="button" (click)="isEditingAddress.set(false)"
+              class="px-3.5 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-xs font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+              Cancel
+            </button>
+          </div>
+        </div>
+        }
+      </div>
+    </div>
+    }
+  </div>
+  }
+
+  <!-- ================= DETAILED LIVE TRACKING MODAL ================= -->
+  @if (isTrackingModalOpen() && selectedOrderForTracking()) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn"
+    (click)="closeTrackingModal()">
+    <div
+      class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl space-y-0 transition-colors"
+      (click)="$event.stopPropagation()">
+      <!-- Modal Header -->
+      <div
+        class="p-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/80 dark:bg-gray-800/60">
+        <div>
+          <div class="flex items-center gap-2">
+            <h3 class="text-base font-extrabold text-gray-900 dark:text-white">
+              Live Delivery Tracker
+            </h3>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-gradient-to-r from-[#FF9500] to-[#FF4D00] text-white">
+              Express
+            </span>
+          </div>
+          <p class="text-xs text-gray-500 dark:text-gray-400 font-mono mt-0.5">
+            Order #{{ selectedOrderForTracking()?.orderNumber }}
+          </p>
+        </div>
+
+        <button type="button" (click)="closeTrackingModal()"
+          class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 text-lg">
+          &times;
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-5 space-y-5 text-xs">
+        <!-- Delivery ETA Banner -->
+        <div
+          class="p-4 rounded-xl bg-[#FFD600]/15 dark:bg-[#FFD600]/10 border border-[#FFD600]/40 flex items-center justify-between">
+          <div class="space-y-0.5">
+            <span class="text-[10px] uppercase font-bold text-[#FF9500] dark:text-[#FFD600]">Estimated
+              Delivery</span>
+            <p class="text-base font-black text-gray-900 dark:text-white">
+              {{ selectedOrderForTracking()?.status === 'Delivered' ? 'Delivered successfully' : 'Within 30-45 Minutes'
+              }}
+            </p>
+          </div>
+          <span class="text-3xl">⚡</span>
+        </div>
+
+        <!-- Driver Info Card -->
+        <div class="p-4 rounded-xl border border-gray-200 dark:border-gray-800 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div
+              class="w-10 h-10 rounded-full bg-gradient-to-r from-[#FF9500] to-[#FF4D00] text-white flex items-center justify-center font-bold text-sm">
+              MK
+            </div>
+            <div>
+              <span class="font-bold text-gray-900 dark:text-white block">Manoj K.</span>
+              <span class="text-[11px] text-gray-500 dark:text-gray-400">Kakkanad Express Delivery Pilot (EV
+                Scooter)</span>
+            </div>
+          </div>
+
+          <a href="tel:+919847000111"
+            class="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1">
+            <span>📞 Call</span>
+          </a>
+        </div>
+
+        <!-- Route Spec -->
+        <div class="space-y-2">
+          <span class="font-bold text-gray-900 dark:text-white block">Dispatch Route:</span>
+          <div class="space-y-2 border-l-2 border-[#FF9500] ml-2 pl-3">
+            <div>
+              <span class="text-[10px] text-gray-400 font-bold block uppercase">Origin</span>
+              <span class="text-gray-700 dark:text-gray-300 font-medium">EBUYZY Kakkanad Central Hub, Infopark
+                Expressway</span>
+            </div>
+            <div>
+              <span class="text-[10px] text-[#FF9500] font-bold block uppercase">Destination</span>
+              <span class="text-gray-900 dark:text-white font-bold">{{ selectedOrderForTracking()?.customer?.address
+                }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div
+        class="p-4 bg-gray-50 dark:bg-gray-800/80 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
+        <span class="text-xs text-gray-500">Need help with items?</span>
+        <button type="button" (click)="closeTrackingModal()"
+          class="px-4 py-2 rounded-lg bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-bold">
+          Close Tracker
+        </button>
+      </div>
+    </div>
+  </div>
+  }
+</div>

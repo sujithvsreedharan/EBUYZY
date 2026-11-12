@@ -1,0 +1,291 @@
+<div class="space-y-6">
+  <!-- Success Notification Toast -->
+  @if (statusUpdateSuccess()) {
+  <div role="alert"
+    class="p-4 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-900 text-sm font-bold flex items-center justify-between shadow-sm animate-in fade-in">
+    <div class="flex items-center gap-2">
+      <span class="text-lg">🎉</span>
+      <span>{{ statusUpdateSuccess() }}</span>
+    </div>
+    <button type="button" (click)="statusUpdateSuccess.set(null)" class="text-emerald-700 hover:text-emerald-900 text-xs font-bold">
+      ✕ Dismiss
+    </button>
+  </div>
+  }
+
+  <!-- Header Banner: Delivery Partner Profile & Zone -->
+  <div
+    class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-colors">
+    <div class="space-y-1">
+      <div class="flex items-center gap-2.5 flex-wrap">
+        <span class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-black text-[#FFD600] font-black text-lg">
+          🛵
+        </span>
+        <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+          {{ currentPartner()?.name ?? 'Assigned Deliveries' }}
+        </h1>
+        <span
+          class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#FFD600]/20 text-black dark:text-[#FFD600] border border-[#FFD600]/60">
+          Delivery Partner
+        </span>
+      </div>
+      <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+        {{ currentPartner()?.vehicle }} &bull; {{ currentPartner()?.zone }} &bull;
+        <span class="font-mono text-gray-700 dark:text-gray-300">+91 {{ currentPartner()?.phone }}</span>
+      </p>
+    </div>
+
+    <!-- For Super Admin / Store Managers: Switch between delivery riders -->
+    @if (!authService.isDeliveryPerson() && staffService.deliveryPersons().length > 1) {
+    <div class="flex items-center gap-2">
+      <label for="partner-select" class="text-xs font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap">
+        Rider:
+      </label>
+      <select id="partner-select" [ngModel]="selectedPartnerId()" (ngModelChange)="selectedPartnerId.set($event)"
+        class="text-xs font-bold px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]">
+        @for (dp of staffService.deliveryPersons(); track dp.id) {
+        <option [value]="dp.id">{{ dp.name }} ({{ dp.vehicleNumber || dp.phone }})</option>
+        }
+      </select>
+    </div>
+    }
+  </div>
+
+  <!-- KPI Metrics Cards (3 Cards) -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <!-- Active Deliveries -->
+    <div
+      class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5 flex flex-col justify-between transition-colors">
+      <div class="flex items-center justify-between text-gray-500 mb-2">
+        <span class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Active Deliveries</span>
+        <span class="p-2 bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 rounded-lg">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </span>
+      </div>
+      <div class="text-3xl font-black text-amber-600 dark:text-amber-400">
+        {{ activeDeliveriesCount() }}
+      </div>
+      <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+        Confirmed &amp; out for delivery
+      </div>
+    </div>
+
+    <!-- Completed Today -->
+    <div
+      class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5 flex flex-col justify-between transition-colors">
+      <div class="flex items-center justify-between text-gray-500 mb-2">
+        <span class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Delivered Today</span>
+        <span class="p-2 bg-[#FFD600]/20 text-black dark:text-[#FFD600] rounded-lg">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+        </span>
+      </div>
+      <div class="text-3xl font-black text-gray-900 dark:text-white">
+        {{ completedTodayCount() }}
+      </div>
+      <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+        Successfully handed to customers
+      </div>
+    </div>
+
+    <!-- Cash to Collect -->
+    <div
+      class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5 flex flex-col justify-between transition-colors">
+      <div class="flex items-center justify-between text-gray-500 mb-2">
+        <span class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Cash to Collect</span>
+        <span class="p-2 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 rounded-lg font-bold text-xs">
+          ₹
+        </span>
+      </div>
+      <div class="text-3xl font-black text-emerald-600 dark:text-emerald-400">
+        ₹{{ cashToCollectTotal() | number }}
+      </div>
+      <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+        From pending active dispatches
+      </div>
+    </div>
+  </div>
+
+  <!-- Search & Filter Controls -->
+  <div
+    class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between transition-colors">
+    <!-- Search -->
+    <div class="relative flex-1">
+      <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      </div>
+      <input type="text" [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)"
+        placeholder="Search assigned orders by order number, customer or locality..."
+        class="w-full pl-10 pr-9 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-xs sm:text-sm placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]" />
+      @if (searchQuery()) {
+      <button type="button" (click)="searchQuery.set('')" aria-label="Clear search"
+        class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600">
+        ✕
+      </button>
+      }
+    </div>
+
+    <!-- Filter Buttons -->
+    <div class="flex items-center gap-1.5 shrink-0" role="tablist">
+      <button type="button" (click)="selectedStatusFilter.set('active')"
+        class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors focus-visible:outline-none"
+        [ngClass]="selectedStatusFilter() === 'active' ? 'bg-[#FF9500] text-white shadow-xs' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200'">
+        Active ({{ activeDeliveriesCount() }})
+      </button>
+      <button type="button" (click)="selectedStatusFilter.set('all')"
+        class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors focus-visible:outline-none"
+        [ngClass]="selectedStatusFilter() === 'all' ? 'bg-[#FF9500] text-white shadow-xs' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200'">
+        All ({{ assignedOrders().length }})
+      </button>
+      <button type="button" (click)="selectedStatusFilter.set('delivered')"
+        class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors focus-visible:outline-none"
+        [ngClass]="selectedStatusFilter() === 'delivered' ? 'bg-[#FF9500] text-white shadow-xs' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200'">
+        Delivered ({{ completedTodayCount() }})
+      </button>
+    </div>
+  </div>
+
+  <!-- List of Assigned Orders (Card-based layout, ideal for mobile delivery riders) -->
+  <div class="space-y-4">
+    @for (order of filteredAssignedOrders(); track order.id) {
+    <div
+      class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5 shadow-xs space-y-4 hover:border-gray-300 dark:hover:border-gray-700 transition-all">
+      <!-- Top Row: Order Number, Time & Status Badge -->
+      <div class="flex items-start justify-between gap-3 border-b border-gray-100 dark:border-gray-800 pb-3">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-mono font-bold text-base text-gray-900 dark:text-white">
+              {{ order.orderNumber }}
+            </span>
+            <app-status-badge [status]="order.status" />
+          </div>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            Placed at {{ order.createdAt | date: 'shortTime' }} &bull; {{ order.items.length }} items
+          </p>
+        </div>
+
+        <div class="text-right">
+          <div class="text-lg font-black text-gray-900 dark:text-white">
+            ₹{{ order.total | number }}
+          </div>
+          <div class="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+            Cash / UPI on Delivery
+          </div>
+        </div>
+      </div>
+
+      <!-- Customer & Destination Details -->
+      <div class="space-y-2">
+        <div class="flex items-center justify-between">
+          <div class="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-2">
+            <span>👤</span>
+            <span>{{ order.customer.name }}</span>
+          </div>
+
+          <!-- Direct Phone Call & WhatsApp shortcuts -->
+          <div class="flex items-center gap-2">
+            <a [href]="'tel:+91' + order.customer.phone"
+              class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 text-gray-800 dark:text-gray-200 text-xs font-bold transition-colors">
+              <span>📞</span>
+              <span>Call</span>
+            </a>
+            <a [href]="getWhatsAppUrl(order)" target="_blank" rel="noopener noreferrer"
+              class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#25D366] hover:bg-[#1EBE5D] text-white text-xs font-bold transition-colors">
+              <span>💬</span>
+              <span>WhatsApp</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Address Box with Google Maps Directions -->
+        <div
+          class="p-3.5 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="space-y-0.5 min-w-0">
+            <div class="text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+              <span>📍</span>
+              <span class="truncate">{{ order.customer.address }}</span>
+            </div>
+            @if (order.customer.landmark) {
+            <p class="text-[11px] text-gray-500 dark:text-gray-400">
+              Landmark: {{ order.customer.landmark }}
+            </p>
+            }
+          </div>
+
+          <a [href]="getGoogleMapsDirectionsUrl(order)" target="_blank" rel="noopener noreferrer"
+            class="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg bg-black text-[#FFD600] hover:bg-gray-800 text-xs font-black shrink-0 transition-colors shadow-xs">
+            <span>🗺️</span>
+            <span>Navigate in Maps</span>
+          </a>
+        </div>
+
+        <!-- Special Customer Note -->
+        @if (order.notes) {
+        <div class="p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 text-xs text-amber-900 dark:text-amber-300 flex items-start gap-2">
+          <span>📝</span>
+          <span class="font-medium">Note: {{ order.notes }}</span>
+        </div>
+        }
+      </div>
+
+      <!-- Items Ordered Preview -->
+      <div class="pt-1 text-xs text-gray-600 dark:text-gray-400 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between flex-wrap gap-2">
+        <div class="font-medium">
+          <span class="text-gray-400">Items:</span>
+          @for (item of order.items; track item.productId; let last = $last) {
+          <span>{{ item.quantity }}x {{ item.productName }}{{ !last ? ', ' : '' }}</span>
+          }
+        </div>
+      </div>
+
+      <!-- Action Status Buttons for Delivery Person -->
+      <div class="pt-2">
+        @if (order.status === 'Confirmed' || order.status === 'New') {
+        <button type="button" (click)="markOutForDelivery(order)"
+          class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#FF9500] to-[#FF4D00] hover:from-[#e08500] hover:to-[#e04000] text-white font-bold text-sm flex items-center justify-center gap-2 shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]">
+          <span>🛵</span>
+          <span>Start Delivery &bull; Mark Out for Delivery</span>
+        </button>
+        } @else if (order.status === 'Out for delivery') {
+        <button type="button" (click)="markDelivered(order)"
+          class="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
+          <span>✅</span>
+          <span>Collected ₹{{ order.total }} &bull; Mark as Delivered</span>
+        </button>
+        } @else if (order.status === 'Delivered') {
+        <div
+          class="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-bold flex items-center justify-center gap-2">
+          <span>✓</span>
+          <span>Order was delivered to customer</span>
+        </div>
+        }
+      </div>
+    </div>
+    } @empty {
+    <div
+      class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-12 text-center space-y-3">
+      <div class="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto text-2xl">
+        🛵
+      </div>
+      <h3 class="text-base font-bold text-gray-900 dark:text-white">No assigned orders found</h3>
+      <p class="text-xs text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
+        When the Super Admin or Order Manager assigns deliveries to this partner, they will appear here in real-time.
+      </p>
+      @if (selectedStatusFilter() !== 'all') {
+      <button type="button" (click)="selectedStatusFilter.set('all')"
+        class="text-xs font-bold text-[#FF9500] hover:underline">
+        Show all assigned orders &rarr;
+      </button>
+      }
+    </div>
+    }
+  </div>
+</div>
+

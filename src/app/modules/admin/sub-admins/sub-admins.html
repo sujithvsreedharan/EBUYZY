@@ -1,0 +1,456 @@
+<div class="space-y-6">
+  <!-- Page Header -->
+  <div
+    class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors">
+    <div>
+      <div class="flex items-center gap-2 mb-1">
+        <h1 class="text-xl sm:text-2xl font-black tracking-tight text-gray-900 dark:text-white">
+          Sub-Admins &amp; Staff Roles
+        </h1>
+        <span
+          class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-[#FFD600]/20 text-black dark:text-[#FFD600] border border-[#FFD600]/50">
+          {{ subAdminService.subAdmins().length }} Staff
+        </span>
+      </div>
+      <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 max-w-2xl">
+        Create sub-admins to handle order management and daily operations. Tick-mark the exact pages each sub-admin can
+        see — unticked pages remain strictly hidden and blocked.
+      </p>
+    </div>
+
+    <!-- Create Sub-Admin Trigger Button -->
+    <button type="button" (click)="openCreateModal()"
+      class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-[#FF9500] to-[#FF4D00] hover:from-[#e08500] hover:to-[#e04000] text-white text-sm font-bold shadow-xs transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+      </svg>
+      <span>+ Add Sub-Admin</span>
+    </button>
+  </div>
+
+  <!-- Notification Banner -->
+  @if (successNotice()) {
+  <div role="status"
+    class="p-4 rounded-xl bg-[#FFD600]/20 border border-[#FFD600]/60 text-black dark:text-[#FFD600] text-xs sm:text-sm font-bold flex items-center justify-between animate-in fade-in">
+    <div class="flex items-center gap-2">
+      <span class="text-base">✓</span>
+      <span>{{ successNotice() }}</span>
+    </div>
+    <button type="button" (click)="successNotice.set(null)" class="text-gray-500 hover:text-black dark:hover:text-white text-xs font-bold">
+      ✕
+    </button>
+  </div>
+  }
+
+  <!-- KPI Summary Counters -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 transition-colors">
+      <div class="text-xs font-medium text-gray-500 dark:text-gray-400">Total Sub-Admins</div>
+      <div class="text-2xl font-black text-gray-900 dark:text-white mt-1">
+        {{ subAdminService.subAdmins().length }}
+      </div>
+    </div>
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 transition-colors">
+      <div class="text-xs font-medium text-gray-500 dark:text-gray-400">Order Managers</div>
+      <div class="text-2xl font-black text-[#FF9500] dark:text-[#FFD600] mt-1">
+        {{ orderManagersCount() }}
+      </div>
+    </div>
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 transition-colors">
+      <div class="text-xs font-medium text-gray-500 dark:text-gray-400">Active Accounts</div>
+      <div class="text-2xl font-black text-stone-900 dark:text-white mt-1">
+        {{ activeCount() }}
+      </div>
+    </div>
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 transition-colors">
+      <div class="text-xs font-medium text-gray-500 dark:text-gray-400">Permission Control</div>
+      <div class="text-xs font-bold text-black dark:text-[#FFD600] mt-2 flex items-center gap-1">
+        <span>🛡️ Tick-Mark RBAC Active</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search & Filter Toolbar -->
+  <div
+    class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 sm:p-5 flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between transition-colors">
+    <!-- Search Input -->
+    <div class="relative flex-1">
+      <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      </div>
+      <input type="text" [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)"
+        placeholder="Search sub-admins by name, email, phone or designation..."
+        aria-label="Search sub-admins"
+        class="w-full pl-10 pr-9 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500] transition-colors" />
+      @if (searchQuery()) {
+      <button type="button" (click)="searchQuery.set('')" aria-label="Clear search"
+        class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+        ✕
+      </button>
+      }
+    </div>
+
+    <!-- Filter Buttons -->
+    <div class="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
+      <button type="button" (click)="selectedFilter.set('all')"
+        class="px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]"
+        [ngClass]="selectedFilter() === 'all' ? 'bg-gradient-to-r from-[#FF9500] to-[#FF4D00] text-white shadow-xs' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'">
+        All Staff
+      </button>
+      <button type="button" (click)="selectedFilter.set('orders')"
+        class="px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]"
+        [ngClass]="selectedFilter() === 'orders' ? 'bg-gradient-to-r from-[#FF9500] to-[#FF4D00] text-white shadow-xs' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'">
+        Order Handlers
+      </button>
+      <button type="button" (click)="selectedFilter.set('active')"
+        class="px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]"
+        [ngClass]="selectedFilter() === 'active' ? 'bg-gradient-to-r from-[#FF9500] to-[#FF4D00] text-white shadow-xs' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'">
+        Active Only
+      </button>
+    </div>
+  </div>
+
+  <!-- Sub-Admins Roster Table -->
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden flex flex-col shadow-2xs transition-colors">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-sm" aria-label="Sub-admins roster table">
+        <thead class="bg-gray-50 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-800 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+          <tr>
+            <th scope="col" class="py-3.5 px-4 sm:px-6">Sub-Admin Details</th>
+            <th scope="col" class="py-3.5 px-4">Login Credentials</th>
+            <th scope="col" class="py-3.5 px-4">Tick-Marked Allowed Pages</th>
+            <th scope="col" class="py-3.5 px-4">Status</th>
+            <th scope="col" class="py-3.5 px-4 sm:px-6 text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+          @for (sub of filteredSubAdmins(); track sub.id) {
+          <tr class="hover:bg-gray-50/80 dark:hover:bg-gray-800/50 transition-colors">
+            <!-- Name & Role Title -->
+            <td class="py-4 px-4 sm:px-6">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-lg bg-[#FFD600]/20 text-black dark:text-[#FFD600] border border-[#FFD600]/40 flex items-center justify-center font-black text-sm shrink-0">
+                  {{ sub.name.charAt(0).toUpperCase() }}
+                </div>
+                <div>
+                  <div class="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-1.5">
+                    <span>{{ sub.name }}</span>
+                    @if (sub.permissions.includes('orders')) {
+                    <span class="px-1.5 py-0.2 rounded text-[10px] font-bold bg-[#FF9500]/15 text-[#FF9500] dark:text-[#FFD600] border border-[#FF9500]/30" title="Authorized for Order Management">
+                      Order Handler
+                    </span>
+                    }
+                  </div>
+                  <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-medium">
+                    {{ sub.roleTitle }}
+                  </div>
+                </div>
+              </div>
+            </td>
+
+            <!-- Login Credentials -->
+            <td class="py-4 px-4">
+              <div class="font-mono text-xs text-gray-800 dark:text-gray-200">
+                {{ sub.email }}
+              </div>
+              <div class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 flex items-center gap-2">
+                <span>+91 {{ sub.phone }}</span>
+                <button type="button" (click)="copyCredentials(sub)" title="Copy login credentials"
+                  class="text-[10px] text-[#FF9500] dark:text-[#FFD600] font-bold hover:underline">
+                  {{ copiedSubAdminId() === sub.id ? '✓ Copied!' : 'Copy Login' }}
+                </button>
+              </div>
+            </td>
+
+            <!-- Allowed Pages Badges -->
+            <td class="py-4 px-4">
+              <div class="flex flex-wrap gap-1.5 max-w-sm">
+                @for (perm of sub.permissions; track perm) {
+                @if (getPermissionBadge(perm); as badge) {
+                <span
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold"
+                  [ngClass]="perm === 'orders' ? 'bg-[#FF9500]/20 text-black dark:text-[#FFD600] border border-[#FF9500]/40' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700'">
+                  <span>{{ badge.icon }}</span>
+                  <span>{{ badge.label }}</span>
+                </span>
+                }
+                }
+              </div>
+              <span class="text-[10px] text-gray-400 dark:text-gray-500 block mt-1">
+                {{ sub.permissions.length }} pages accessible
+              </span>
+            </td>
+
+            <!-- Status Toggle -->
+            <td class="py-4 px-4">
+              <button type="button" role="switch" (click)="toggleActiveStatus(sub)"
+                [attr.aria-checked]="sub.isActive"
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]"
+                [ngClass]="sub.isActive ? 'bg-[#FFD600]/20 text-black dark:text-[#FFD600] border-[#FFD600]/60' : 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800'">
+                <span class="w-1.5 h-1.5 rounded-full" [ngClass]="sub.isActive ? 'bg-[#FF9500]' : 'bg-rose-500'"></span>
+                <span>{{ sub.isActive ? 'Active' : 'Inactive' }}</span>
+              </button>
+            </td>
+
+            <!-- Actions -->
+            <td class="py-4 px-4 sm:px-6 text-right">
+              <div class="inline-flex items-center gap-1.5 justify-end">
+                <button type="button" (click)="openEditModal(sub)" title="Edit sub-admin and tick-mark pages"
+                  class="px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-700 dark:text-gray-200 hover:border-[#FF9500] hover:text-[#FF9500] hover:bg-orange-50 dark:hover:bg-orange-950/40 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#FF9500]">
+                  Edit Pages
+                </button>
+                <button type="button" (click)="deleteSubAdmin(sub)" title="Remove sub-admin"
+                  class="p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-400 hover:text-rose-600 hover:border-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-rose-500">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+          } @empty {
+          <tr>
+            <td colspan="5" class="py-12 text-center">
+              <div class="max-w-xs mx-auto text-center space-y-3">
+                <div class="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto text-2xl">
+                  🛡️
+                </div>
+                <h3 class="text-sm font-bold text-gray-900 dark:text-white">No sub-admins found</h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                  Create a new sub-admin to delegate order management or catalog duties.
+                </p>
+                <button type="button" (click)="openCreateModal()"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#FF9500] to-[#FF4D00] text-white text-xs font-bold">
+                  + Add Sub-Admin
+                </button>
+              </div>
+            </td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ================= POPUP MODAL FOR SUB-ADMIN CREATION / PAGE PERMISSIONS ================= -->
+  @if (isModalOpen()) {
+  <div
+    class="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4"
+    role="dialog" aria-modal="true" (click)="closeModal()">
+    <div
+      class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 w-full max-w-2xl overflow-hidden shadow-2xl max-h-[92vh] flex flex-col my-auto transition-colors animate-in fade-in zoom-in-95 duration-200"
+      (click)="$event.stopPropagation()">
+      <!-- Modal Header -->
+      <div class="p-5 sm:p-6 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/40">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="w-7 h-7 rounded-lg bg-[#000000] text-[#FFD600] border border-[#FFD600] flex items-center justify-center font-black text-xs">
+              E
+            </span>
+            <h2 class="text-lg font-black text-gray-900 dark:text-white">
+              {{ editingSubAdmin() ? 'Edit Sub-Admin & Page Permissions' : 'Create Sub-Admin for Store Operations' }}
+            </h2>
+          </div>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            Admin decides which pages can be seen. Tick-marked pages will be visible to this user; unticked pages are blocked.
+          </p>
+        </div>
+        <button type="button" (click)="closeModal()" aria-label="Close dialog"
+          class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Modal Body (Scrollable) -->
+      <div class="p-5 sm:p-6 overflow-y-auto space-y-6 flex-1 text-xs">
+        @if (formError()) {
+        <div role="alert"
+          class="p-3.5 rounded-lg bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 font-bold flex items-center gap-2">
+          <span>⚠️</span>
+          <span>{{ formError() }}</span>
+        </div>
+        }
+
+        <form [formGroup]="subAdminForm" (ngSubmit)="saveSubAdmin()" id="subAdminFormElem" class="space-y-5">
+          <!-- Sub-Admin Profile Details -->
+          <div class="space-y-4">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-800 pb-1.5 flex items-center justify-between">
+              <span>1. Staff Credentials &amp; Details</span>
+              <span class="text-[11px] font-normal lowercase text-gray-400">Used to sign in to admin portal</span>
+            </h3>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <!-- Full Name -->
+              <div>
+                <label for="subName" class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
+                  Full Name <span class="text-rose-600">*</span>
+                </label>
+                <input id="subName" type="text" formControlName="name" placeholder="e.g. Suresh Kumar"
+                  class="w-full px-3.5 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]" />
+                @if (subAdminForm.get('name')?.invalid && subAdminForm.get('name')?.touched) {
+                <p class="text-[11px] text-rose-600 mt-1">Full name is required (min 2 characters)</p>
+                }
+              </div>
+
+              <!-- Role / Title -->
+              <div>
+                <label for="subRoleTitle" class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
+                  Designation / Role Title <span class="text-rose-600">*</span>
+                </label>
+                <input id="subRoleTitle" type="text" formControlName="roleTitle" placeholder="e.g. Order Dispatch Executive"
+                  class="w-full px-3.5 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]" />
+              </div>
+
+              <!-- Email / Username -->
+              <div>
+                <label for="subEmail" class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
+                  Login Email <span class="text-rose-600">*</span>
+                </label>
+                <input id="subEmail" type="email" formControlName="email" placeholder="e.g. suresh.orders@ebuyzy.in"
+                  class="w-full px-3.5 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-xs font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]" />
+                @if (subAdminForm.get('email')?.invalid && subAdminForm.get('email')?.touched) {
+                <p class="text-[11px] text-rose-600 mt-1">A valid email address is required</p>
+                }
+              </div>
+
+              <!-- Phone -->
+              <div>
+                <label for="subPhone" class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
+                  Mobile Number (10 digits) <span class="text-rose-600">*</span>
+                </label>
+                <input id="subPhone" type="tel" formControlName="phone" placeholder="9847000222" maxlength="10"
+                  class="w-full px-3.5 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-xs font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]" />
+                @if (subAdminForm.get('phone')?.invalid && subAdminForm.get('phone')?.touched) {
+                <p class="text-[11px] text-rose-600 mt-1">Please enter a 10-digit Indian mobile number</p>
+                }
+              </div>
+
+              <!-- Password -->
+              <div class="sm:col-span-2">
+                <label for="subPass" class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
+                  Portal Login Password <span class="text-rose-600">*</span>
+                </label>
+                <input id="subPass" type="text" formControlName="password" placeholder="order123"
+                  class="w-full px-3.5 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-xs font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]" />
+                <p class="text-[11px] text-gray-400 dark:text-gray-500 mt-1">Min 4 characters. The sub-admin uses this password to sign in at /admin/login.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 2: Page Permissions (Tick-Marks) -->
+          <div class="space-y-4 pt-2">
+            <div class="border-b border-gray-100 dark:border-gray-800 pb-2">
+              <div class="flex items-center justify-between flex-wrap gap-2">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">
+                  2. Decide Accessible Pages (Admin Tick-Marks)
+                </h3>
+                <span
+                  class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#FFD600]/20 text-black dark:text-[#FFD600] border border-[#FFD600]/60">
+                  {{ selectedPermissions().length }} of {{ permissionDefinitions.length }} Pages Tick-Marked
+                </span>
+              </div>
+              <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                Tick-mark the pages you want this sub-admin to see. When they sign in, only the tick-marked pages will appear in their navigation bar.
+              </p>
+            </div>
+
+            <!-- Quick Preset Chips -->
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-[11px] font-bold text-gray-500 dark:text-gray-400">Quick Presets:</span>
+              <button type="button" (click)="applyPreset('order-manager')"
+                class="px-2.5 py-1 rounded-md text-xs font-bold border transition-colors focus-visible:outline-none"
+                [ngClass]="selectedPermissions().includes('orders') && !selectedPermissions().includes('products') ? 'bg-[#FF9500] text-white border-[#FF9500]' : 'bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-[#FF9500]'">
+                📦 Order Manager (Orders + Dashboard)
+              </button>
+              <button type="button" (click)="applyPreset('orders-only')"
+                class="px-2.5 py-1 rounded-md text-xs font-bold border transition-colors focus-visible:outline-none"
+                [ngClass]="selectedPermissions().length === 1 && selectedPermissions()[0] === 'orders' ? 'bg-[#FF9500] text-white border-[#FF9500]' : 'bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-[#FF9500]'">
+                🛵 Orders Only
+              </button>
+              <button type="button" (click)="applyPreset('inventory-manager')"
+                class="px-2.5 py-1 rounded-md text-xs font-bold border transition-colors focus-visible:outline-none bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-[#FF9500]">
+                🛒 Inventory Manager
+              </button>
+              <button type="button" (click)="applyPreset('all')"
+                class="px-2.5 py-1 rounded-md text-xs font-bold border transition-colors focus-visible:outline-none bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-[#FF9500]">
+                🌟 All Pages
+              </button>
+            </div>
+
+            <!-- The Tick-Mark Checkbox Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              @for (def of permissionDefinitions; track def.id) {
+              <div (click)="togglePermission(def.id)"
+                class="p-3.5 rounded-xl border cursor-pointer transition-all flex items-start gap-3 select-none"
+                [ngClass]="
+                  isPermissionSelected(def.id)
+                    ? 'border-[#FF9500] bg-[#FFD600]/10 dark:bg-[#FFD600]/5 ring-1 ring-[#FF9500]/60'
+                    : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/50 hover:border-gray-300 dark:hover:border-gray-700'
+                ">
+                <!-- Checkbox Square -->
+                <div class="mt-0.5 shrink-0">
+                  <div
+                    class="w-5 h-5 rounded-md flex items-center justify-center font-bold text-xs transition-colors"
+                    [ngClass]="
+                      isPermissionSelected(def.id)
+                        ? 'bg-gradient-to-r from-[#FF9500] to-[#FF4D00] text-white shadow-xs'
+                        : 'border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900'
+                    ">
+                    @if (isPermissionSelected(def.id)) {
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                    </svg>
+                    }
+                  </div>
+                </div>
+
+                <!-- Info -->
+                <div class="space-y-1 min-w-0 flex-1">
+                  <div class="flex items-center justify-between gap-1">
+                    <div class="font-extrabold text-gray-900 dark:text-white text-xs flex items-center gap-1.5">
+                      <span>{{ def.icon }}</span>
+                      <span>{{ def.label }}</span>
+                    </div>
+                    <span class="font-mono text-[10px] text-gray-400 dark:text-gray-500">
+                      {{ def.route }}
+                    </span>
+                  </div>
+                  <p class="text-[11px] text-gray-500 dark:text-gray-400 leading-snug">
+                    {{ def.description }}
+                  </p>
+                </div>
+              </div>
+              }
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-4 sm:p-5 border-t border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/40 flex items-center justify-between gap-3">
+        <div class="text-[11px] text-gray-500 dark:text-gray-400">
+          Status: <strong>{{ selectedPermissions().length }} section(s) tick-marked</strong>
+        </div>
+
+        <div class="flex items-center gap-2.5">
+          <button type="button" (click)="closeModal()"
+            class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 text-xs font-bold transition-colors">
+            Cancel
+          </button>
+          <button type="submit" form="subAdminFormElem" [disabled]="subAdminForm.invalid || isSubmitting()"
+            class="px-5 py-2 rounded-lg bg-gradient-to-r from-[#FF9500] to-[#FF4D00] hover:from-[#e08500] hover:to-[#e04000] text-white text-xs font-black shadow-xs transition-colors disabled:opacity-60 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]">
+            {{ editingSubAdmin() ? 'Update Sub-Admin' : 'Create Sub-Admin' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  }
+</div>
+

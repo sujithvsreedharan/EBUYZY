@@ -1,0 +1,79 @@
+<div class="space-y-6">
+  <!-- Page Header -->
+  <div
+    class="bg-white border border-gray-200 rounded-xl p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div>
+      <div class="flex items-center gap-2 mb-1">
+        <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-gray-900">Customers</h1>
+        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">
+          {{ customers().length }} customers
+        </span>
+      </div>
+      <p class="text-sm text-gray-500">
+        Directory of Kerala grocery delivery customers, contact numbers, and purchase history.
+      </p>
+    </div>
+  </div>
+
+  <!-- Search Filter -->
+  <div class="bg-white border border-gray-200 rounded-xl p-4 sm:p-5">
+    <div class="relative">
+      <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      </div>
+      <input type="text" [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)"
+        placeholder="Search customers by name, phone (+91), or address locality..." aria-label="Search customers"
+        class="w-full pl-10 pr-9 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 text-sm placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500] transition-colors" />
+    </div>
+  </div>
+
+  <!-- Customers Table -->
+  <div class="bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-sm" aria-label="Customers directory table">
+        <thead class="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600 uppercase tracking-wider">
+          <tr>
+            <th scope="col" class="py-3.5 px-4 sm:px-6">Customer</th>
+            <th scope="col" class="py-3.5 px-4">Contact phone</th>
+            <th scope="col" class="py-3.5 px-4">Delivery address</th>
+            <th scope="col" class="py-3.5 px-4">Orders count</th>
+            <th scope="col" class="py-3.5 px-4 sm:px-6">Total spend</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          @for (c of filteredCustomers(); track c.phone) {
+          <tr class="hover:bg-gray-50/80 transition-colors">
+            <td class="py-4 px-4 sm:px-6">
+              <div class="font-bold text-gray-900 text-sm">{{ c.name }}</div>
+              <div class="text-xs text-gray-400">Last order: {{ c.lastOrderDate | date: 'mediumDate' }}</div>
+            </td>
+            <td class="py-4 px-4 font-mono text-xs text-gray-800">
+              <a [href]="'tel:+91' + c.phone" class="text-[#FF9500] hover:underline font-bold">
+                +91 {{ c.phone }}
+              </a>
+            </td>
+            <td class="py-4 px-4 text-xs text-gray-600 max-w-[280px] truncate" [title]="c.address">
+              {{ c.address }}
+            </td>
+            <td class="py-4 px-4 text-xs font-semibold text-gray-800">
+              {{ c.orderCount }} {{ c.orderCount === 1 ? 'order' : 'orders' }}
+            </td>
+            <td class="py-4 px-4 sm:px-6 font-bold text-gray-900">
+              ₹{{ c.totalSpent | number }}
+            </td>
+          </tr>
+          } @empty {
+          <tr>
+            <td colspan="5" class="py-10 text-center text-gray-500 text-sm">
+              No customers found matching your search.
+            </td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

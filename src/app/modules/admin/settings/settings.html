@@ -1,0 +1,156 @@
+<div class="space-y-6 max-w-4xl">
+  <!-- Page Header -->
+  <div
+    class="bg-white border border-gray-200 rounded-xl p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div>
+      <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-gray-900">Settings</h1>
+      <p class="text-sm text-gray-500 mt-1">
+        Configure store profile, Kerala delivery radius, dispatch fees, minimum orders, and WhatsApp notifications.
+      </p>
+    </div>
+  </div>
+
+  <!-- Success Notification Alert -->
+  @if (showSuccessBanner()) {
+  <div role="status"
+    class="p-4 rounded-xl bg-[#FFD600]/20 border border-[#FFD600]/60 text-black text-xs sm:text-sm font-bold flex items-center gap-2.5 animate-in fade-in duration-200">
+    <svg class="w-5 h-5 text-[#FF9500] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+    </svg>
+    <span>Store settings have been updated successfully!</span>
+  </div>
+  }
+
+  <!-- Settings Form Card -->
+  <div class="bg-white border border-gray-200 rounded-xl p-5 sm:p-7">
+    <form [formGroup]="settingsForm" (ngSubmit)="saveSettings()" class="space-y-6" novalidate>
+      <!-- Shop Status Toggle Switch -->
+      <div class="p-4 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-between">
+        <div>
+          <span class="text-sm font-bold text-gray-900 block">Shop availability</span>
+          <span class="text-xs text-gray-500">
+            {{ settingsForm.get('isOpen')?.value ? 'Shop is currently active and accepting orders' : 'Shop is paused and
+            orders are disabled' }}
+          </span>
+        </div>
+        <button type="button" role="switch" (click)="toggleShopOpen()"
+          [attr.aria-checked]="settingsForm.get('isOpen')?.value"
+          class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]"
+          [ngClass]="settingsForm.get('isOpen')?.value ? 'bg-[#FF9500]' : 'bg-gray-300'">
+          <span
+            class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+            [ngClass]="settingsForm.get('isOpen')?.value ? 'translate-x-5' : 'translate-x-0'"></span>
+        </button>
+      </div>
+
+      <!-- General Section -->
+      <div class="space-y-4">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-gray-600 border-b border-gray-100 pb-2">
+          General information
+        </h2>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <!-- Shop Name -->
+          <div>
+            <label for="shopName" class="block text-xs font-semibold text-gray-700 mb-1">
+              Shop name <span class="text-rose-600">*</span>
+            </label>
+            <input id="shopName" type="text" formControlName="shopName" placeholder="EBUYZY"
+              class="w-full px-3.5 py-2 rounded-lg border border-gray-300 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]" />
+          </div>
+
+          <!-- WhatsApp Number -->
+          <div>
+            <label for="whatsappNumber" class="block text-xs font-semibold text-gray-700 mb-1">
+              WhatsApp dispatch number (Indian prefix) <span class="text-rose-600">*</span>
+            </label>
+            <input id="whatsappNumber" type="text" formControlName="whatsappNumber" placeholder="919847001234"
+              class="w-full px-3.5 py-2 rounded-lg border border-gray-300 text-sm font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]" />
+            <p class="text-[11px] text-gray-400 mt-1">E.g. 919847001234 without symbols</p>
+          </div>
+        </div>
+
+        <!-- Shop Physical Address -->
+        <div>
+          <label for="shopAddress" class="block text-xs font-semibold text-gray-700 mb-1">
+            Store location address <span class="text-rose-600">*</span>
+          </label>
+          <input id="shopAddress" type="text" formControlName="shopAddress"
+            placeholder="Near Infopark Phase 1, Kakkanad, Kochi, Kerala - 682042"
+            class="w-full px-3.5 py-2 rounded-lg border border-gray-300 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]" />
+        </div>
+      </div>
+
+      <!-- Geolocation Coordinates -->
+      <div class="space-y-4">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-gray-600 border-b border-gray-100 pb-2">
+          Store geolocation coordinates
+        </h2>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label for="shopLat" class="block text-xs font-semibold text-gray-700 mb-1">
+              Store latitude &deg;N <span class="text-rose-600">*</span>
+            </label>
+            <input id="shopLat" type="number" step="any" formControlName="shopLatitude" placeholder="10.0159"
+              class="w-full px-3.5 py-2 rounded-lg border border-gray-300 text-sm font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]" />
+          </div>
+
+          <div>
+            <label for="shopLng" class="block text-xs font-semibold text-gray-700 mb-1">
+              Store longitude &deg;E <span class="text-rose-600">*</span>
+            </label>
+            <input id="shopLng" type="number" step="any" formControlName="shopLongitude" placeholder="76.3419"
+              class="w-full px-3.5 py-2 rounded-lg border border-gray-300 text-sm font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Delivery Parameters -->
+      <div class="space-y-4">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-gray-600 border-b border-gray-100 pb-2">
+          Delivery parameters & fees (INR ₹)
+        </h2>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <!-- Delivery Radius -->
+          <div>
+            <label for="delivRadius" class="block text-xs font-semibold text-gray-700 mb-1">
+              Delivery radius (km) <span class="text-rose-600">*</span>
+            </label>
+            <input id="delivRadius" type="number" step="0.5" min="0.5" max="20" formControlName="deliveryRadiusKm"
+              placeholder="4.5"
+              class="w-full px-3.5 py-2 rounded-lg border border-gray-300 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]" />
+            <p class="text-[11px] text-gray-400 mt-1">Kerala local radius: 3 - 5 km</p>
+          </div>
+
+          <!-- Delivery Fee -->
+          <div>
+            <label for="delivFee" class="block text-xs font-semibold text-gray-700 mb-1">
+              Delivery fee (₹ INR) <span class="text-rose-600">*</span>
+            </label>
+            <input id="delivFee" type="number" min="0" formControlName="deliveryFee" placeholder="25"
+              class="w-full px-3.5 py-2 rounded-lg border border-gray-300 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]" />
+          </div>
+
+          <!-- Min Order Amount -->
+          <div>
+            <label for="minOrder" class="block text-xs font-semibold text-gray-700 mb-1">
+              Minimum order (₹ INR) <span class="text-rose-600">*</span>
+            </label>
+            <input id="minOrder" type="number" min="0" formControlName="minOrderAmount" placeholder="150"
+              class="w-full px-3.5 py-2 rounded-lg border border-gray-300 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Save Button -->
+      <div class="pt-4 border-t border-gray-200 flex justify-end">
+        <button type="submit" [disabled]="settingsForm.invalid || isSaving()"
+          class="px-5 py-2.5 rounded-lg bg-gradient-to-r from-[#FF9500] to-[#FF4D00] hover:from-[#e08500] hover:to-[#e04000] text-white text-xs sm:text-sm font-bold shadow-xs transition-colors disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]">
+          {{ isSaving() ? 'Saving changes...' : 'Save settings' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

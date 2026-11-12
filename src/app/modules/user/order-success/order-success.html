@@ -1,0 +1,102 @@
+<div class="max-w-2xl mx-auto py-6 sm:py-10 space-y-6">
+  @if (order(); as currentOrder) {
+  <div
+    class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-6 sm:p-8 text-center space-y-6 shadow-xs transition-colors">
+    <!-- Success Icon -->
+    <div
+      class="w-16 h-16 rounded-full bg-[#FFD600]/20 text-[#FF9500] dark:text-[#FFD600] flex items-center justify-center mx-auto border-2 border-[#FFD600]/60">
+      <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+      </svg>
+    </div>
+
+    <!-- Title & Order ID -->
+    <div class="space-y-1">
+      <span class="text-xs font-black uppercase tracking-wider text-[#FF9500] dark:text-[#FFD600]">Order
+        Confirmed</span>
+      <h1 class="text-2xl font-black text-gray-900 dark:text-white">Thank you, {{ currentOrder.customer.name }}!</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400">
+        Your grocery order <span class="font-mono font-bold text-gray-800 dark:text-gray-200">#{{
+          currentOrder.orderNumber }}</span> has been received and sent to our Kakkanad store.
+      </p>
+    </div>
+
+    <!-- Delivery ETA Card -->
+    <div
+      class="p-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-3 text-left">
+      <div class="flex items-center gap-3">
+        <div class="p-2.5 rounded-lg bg-[#FFD600]/20 text-[#FF9500] dark:text-[#FFD600]">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <div>
+          <span class="text-xs text-gray-500 dark:text-gray-400 font-semibold block">Estimated Delivery</span>
+          <span class="text-sm font-bold text-gray-900 dark:text-white">30 - 45 Minutes</span>
+        </div>
+      </div>
+
+      <div class="text-right">
+        <span class="text-xs text-gray-500 dark:text-gray-400 font-semibold block">Total Amount</span>
+        <span class="text-base font-extrabold text-[#FF4D00] dark:text-[#FF9500]">₹{{ currentOrder.total | number
+          }}</span>
+      </div>
+    </div>
+
+    <!-- WhatsApp Confirmation Action Button -->
+    <div class="pt-2">
+      <a [href]="getWhatsAppStoreUrl(currentOrder)" target="_blank" rel="noopener noreferrer"
+        class="w-full py-3.5 px-4 rounded-xl bg-[#25D366] hover:bg-[#1EBE5D] text-white font-bold text-sm flex items-center justify-center gap-2 transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1EBE5D]">
+        <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+          <path
+            d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z" />
+        </svg>
+        <span>Send Order Update to EBUYZY WhatsApp</span>
+      </a>
+      <p class="text-[11px] text-gray-400 dark:text-gray-500 mt-2">
+        Click above to notify the delivery manager with your prefilled order invoice.
+      </p>
+    </div>
+
+    <!-- Order Details Summary Accordion -->
+    <div class="border-t border-gray-100 dark:border-gray-800 pt-5 text-left space-y-3">
+      <h2 class="text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">Order Details</h2>
+
+      <div
+        class="p-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 space-y-2 text-xs">
+        <div class="text-gray-800 dark:text-gray-200">
+          <span class="font-bold">Delivery To:</span> {{ currentOrder.customer.address }}
+        </div>
+        <div class="text-gray-800 dark:text-gray-200">
+          <span class="font-bold">Contact Phone:</span> +91 {{ currentOrder.customer.phone }}
+        </div>
+        <div class="text-gray-800 dark:text-gray-200">
+          <span class="font-bold">Items Ordered:</span>
+          <ul class="list-disc list-inside mt-1 space-y-0.5 text-gray-600 dark:text-gray-300">
+            @for (item of currentOrder.items; track item.productId) {
+            <li>{{ item.productName }} &bull; {{ item.quantity }} &times; {{ item.unit }} (₹{{ item.total }})</li>
+            }
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions: Track in Account & Continue Shopping -->
+    <div class="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+      <a routerLink="/profile" [queryParams]="{ tab: 'orders' }"
+        class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#FF9500] to-[#FF4D00] hover:from-[#e08500] hover:to-[#e04000] text-white text-xs font-black transition-colors shadow-sm flex items-center gap-1.5">
+        <span>📦 Track Order in My Account</span>
+      </a>
+      <a routerLink="/"
+        class="inline-flex items-center text-xs font-bold text-gray-700 dark:text-gray-300 hover:text-[#FF9500] dark:hover:text-[#FFD600] hover:underline px-3 py-2">
+        &larr; Continue shopping on EBUYZY
+      </a>
+    </div>
+  </div>
+  } @else {
+  <div class="py-16 text-center space-y-3">
+    <p class="text-sm text-gray-500 dark:text-gray-400">Loading order confirmation...</p>
+  </div>
+  }
+</div>

@@ -1,0 +1,607 @@
+<div class="space-y-6">
+  <!-- Success Notification Banner -->
+  @if (successNotice()) {
+  <div role="alert"
+    class="p-4 rounded-xl bg-[#FFD600]/25 border border-[#FFD600]/70 text-black text-xs sm:text-sm font-bold flex items-center justify-between shadow-xs animate-in fade-in">
+    <div class="flex items-center gap-2">
+      <span class="text-base">✨</span>
+      <span>{{ successNotice() }}</span>
+    </div>
+    <button type="button" (click)="successNotice.set(null)"
+      class="p-1 text-gray-700 hover:text-black rounded text-xs font-bold">
+      ✕ Dismiss
+    </button>
+  </div>
+  }
+
+  <!-- Page Header -->
+  <div
+    class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-colors">
+    <div>
+      <div class="flex items-center gap-2.5 mb-1 flex-wrap">
+        <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Staff Management</h1>
+        <span
+          class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold bg-[#FFD600]/20 text-black dark:text-[#FFD600] border border-[#FFD600]/60">
+          Sub-Admins &amp; Delivery Partners
+        </span>
+      </div>
+      <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+        Create team accounts: Sub-Admins with tick-marked page access and Delivery Persons for assigned local fulfillment.
+      </p>
+    </div>
+
+    <!-- Header Action Button: Add Staff Member -->
+    <div class="flex items-center gap-2.5 shrink-0 flex-wrap">
+      <button type="button" (click)="openCreateModal('delivery_person')"
+        class="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 hover:border-[#FF9500] bg-white dark:bg-gray-800 text-xs font-bold text-gray-800 dark:text-gray-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]">
+        <span>🛵</span>
+        <span>+ Add Delivery Person</span>
+      </button>
+
+      <button type="button" (click)="openCreateModal('sub_admin')"
+        class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#FF9500] to-[#FF4D00] hover:from-[#e08500] hover:to-[#e04000] text-white font-bold text-xs sm:text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]">
+        <span>🛡️</span>
+        <span>+ Add Sub-Admin</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 4 KPI Metric Cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <!-- Card 1: Total Staff Members -->
+    <div
+      class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5 flex flex-col justify-between transition-colors">
+      <div class="flex items-center justify-between text-gray-500 mb-2">
+        <span class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Total Staff</span>
+        <span class="p-2 bg-[#FFD600]/20 text-black dark:text-[#FFD600] rounded-lg">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+          </svg>
+        </span>
+      </div>
+      <div class="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
+        {{ totalStaffCount() }}
+      </div>
+      <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+        Team accounts registered
+      </div>
+    </div>
+
+    <!-- Card 2: Sub-Admins -->
+    <div
+      class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5 flex flex-col justify-between transition-colors">
+      <div class="flex items-center justify-between text-gray-500 mb-2">
+        <span class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Sub-Admins</span>
+        <span class="p-2 bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 rounded-lg">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
+        </span>
+      </div>
+      <div class="text-2xl font-bold text-amber-600 dark:text-amber-400 tracking-tight">
+        {{ subAdminCount() }}
+      </div>
+      <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+        Operations &amp; order managers
+      </div>
+    </div>
+
+    <!-- Card 3: Delivery Persons -->
+    <div
+      class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5 flex flex-col justify-between transition-colors">
+      <div class="flex items-center justify-between text-gray-500 mb-2">
+        <span class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Delivery Persons</span>
+        <span class="p-2 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 rounded-lg">
+          🛵
+        </span>
+      </div>
+      <div class="text-2xl font-bold text-emerald-600 dark:text-emerald-400 tracking-tight">
+        {{ deliveryPersonCount() }}
+      </div>
+      <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+        Local Kakkanad delivery riders
+      </div>
+    </div>
+
+    <!-- Card 4: Active Accounts -->
+    <div
+      class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5 flex flex-col justify-between transition-colors">
+      <div class="flex items-center justify-between text-gray-500 mb-2">
+        <span class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Active Status</span>
+        <span class="p-2 bg-[#FFD600]/20 text-black dark:text-[#FFD600] rounded-lg">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+        </span>
+      </div>
+      <div class="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
+        {{ activeCount() }} / {{ totalStaffCount() }}
+      </div>
+      <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+        Active &amp; authorized to login
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters & Search Toolbar -->
+  <div
+    class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 sm:p-5 flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between transition-colors">
+    <!-- Search Input -->
+    <div class="relative flex-1">
+      <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      </div>
+      <input type="text" [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)"
+        placeholder="Search staff by name, email, phone, vehicle, or role..."
+        class="w-full pl-10 pr-9 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-xs sm:text-sm placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500] transition-colors" />
+      @if (searchQuery()) {
+      <button type="button" (click)="searchQuery.set('')" aria-label="Clear search"
+        class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600">
+        ✕
+      </button>
+      }
+    </div>
+
+    <!-- Segmented Filter Buttons -->
+    <div class="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0" role="tablist">
+      <button type="button" (click)="selectedFilter.set('all')"
+        class="px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors focus-visible:outline-none"
+        [ngClass]="selectedFilter() === 'all' ? 'bg-[#FF9500] text-white shadow-xs' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200'">
+        All Staffs ({{ totalStaffCount() }})
+      </button>
+      <button type="button" (click)="selectedFilter.set('sub_admin')"
+        class="px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors focus-visible:outline-none"
+        [ngClass]="selectedFilter() === 'sub_admin' ? 'bg-[#FF9500] text-white shadow-xs' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200'">
+        🛡️ Sub-Admins ({{ subAdminCount() }})
+      </button>
+      <button type="button" (click)="selectedFilter.set('delivery_person')"
+        class="px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors focus-visible:outline-none"
+        [ngClass]="selectedFilter() === 'delivery_person' ? 'bg-[#FF9500] text-white shadow-xs' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200'">
+        🛵 Delivery Partners ({{ deliveryPersonCount() }})
+      </button>
+      <button type="button" (click)="selectedFilter.set('active')"
+        class="px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors focus-visible:outline-none"
+        [ngClass]="selectedFilter() === 'active' ? 'bg-[#FF9500] text-white shadow-xs' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200'">
+        Active ({{ activeCount() }})
+      </button>
+    </div>
+  </div>
+
+  <!-- Staff Table -->
+  <div
+    class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden flex flex-col transition-colors">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-sm" aria-label="Staff management roster">
+        <thead
+          class="bg-gray-50 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-800 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
+          <tr>
+            <th scope="col" class="py-3.5 px-4 sm:px-6">Staff Member</th>
+            <th scope="col" class="py-3.5 px-4">Login Credentials</th>
+            <th scope="col" class="py-3.5 px-4">Role &amp; Details</th>
+            <th scope="col" class="py-3.5 px-4">Portal Page Access</th>
+            <th scope="col" class="py-3.5 px-4 text-center">Status</th>
+            <th scope="col" class="py-3.5 px-4 sm:px-6 text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+          @for (staff of filteredStaffs(); track staff.id) {
+          <tr class="hover:bg-gray-50/80 dark:hover:bg-gray-800/50 transition-colors">
+            <!-- Staff Member Name & Type Badge -->
+            <td class="py-4 px-4 sm:px-6">
+              <div class="flex items-center gap-3">
+                <div
+                  class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shrink-0"
+                  [ngClass]="staff.type === 'delivery_person' ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300' : 'bg-[#FFD600]/25 text-black dark:text-[#FFD600]'">
+                  {{ staff.type === 'delivery_person' ? '🛵' : '🛡️' }}
+                </div>
+                <div>
+                  <div class="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <span>{{ staff.name }}</span>
+                    @if (staff.type === 'delivery_person') {
+                    <span
+                      class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                      Delivery Partner
+                    </span>
+                    } @else {
+                    <span
+                      class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                      Sub-Admin
+                    </span>
+                    }
+                  </div>
+                  <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    {{ staff.roleTitle }}
+                  </div>
+                </div>
+              </div>
+            </td>
+
+            <!-- Credentials & Copy Button -->
+            <td class="py-4 px-4 font-mono text-xs">
+              <div class="text-gray-900 dark:text-gray-200 font-semibold">{{ staff.email }}</div>
+              <div class="text-gray-500 dark:text-gray-400 mt-0.5">+91 {{ staff.phone }}</div>
+              <div class="mt-1 flex items-center gap-2 font-sans">
+                <button type="button" (click)="copyCredentials(staff)"
+                  class="inline-flex items-center gap-1 text-[11px] font-bold text-[#FF9500] hover:underline focus-visible:outline-none">
+                  <span>{{ copiedStaffId() === staff.id ? '✓ Copied' : '📋 Copy Login' }}</span>
+                </button>
+                <span class="text-gray-300 dark:text-gray-700">&bull;</span>
+                <span class="text-[11px] text-gray-400">Pass: {{ staff.password || '••••' }}</span>
+              </div>
+            </td>
+
+            <!-- Role & Vehicle/Zone Details -->
+            <td class="py-4 px-4 text-xs">
+              @if (staff.type === 'delivery_person') {
+              <div class="text-gray-800 dark:text-gray-200 font-semibold flex items-center gap-1">
+                <span>🛵</span>
+                <span>{{ staff.vehicleType || 'Motorcycle' }}</span>
+              </div>
+              @if (staff.vehicleNumber) {
+              <div class="font-mono text-gray-500 dark:text-gray-400 text-[11px] mt-0.5">
+                Reg: {{ staff.vehicleNumber }}
+              </div>
+              }
+              <div class="text-[11px] text-gray-500 dark:text-gray-400">
+                Zone: {{ staff.zone || 'Kakkanad, Kochi' }}
+              </div>
+              } @else {
+              <div class="text-gray-800 dark:text-gray-200 font-semibold">
+                Store Operations
+              </div>
+              <div class="text-[11px] text-gray-500 dark:text-gray-400">
+                {{ staff.permissions.length }} pages authorized
+              </div>
+              }
+            </td>
+
+            <!-- Page Access Pills -->
+            <td class="py-4 px-4">
+              @if (staff.type === 'delivery_person') {
+              <span
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                <span>🛵</span>
+                <span>Assigned Orders Only</span>
+              </span>
+              } @else {
+              <div class="flex items-center gap-1.5 flex-wrap max-w-xs">
+                @for (permId of staff.permissions; track permId) {
+                @if (getPermissionBadge(permId); as badge) {
+                <span
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700"
+                  [title]="badge.description">
+                  <span>{{ badge.icon }}</span>
+                  <span>{{ badge.label }}</span>
+                </span>
+                }
+                }
+              </div>
+              }
+            </td>
+
+            <!-- Active / Inactive Switch -->
+            <td class="py-4 px-4 text-center">
+              <button type="button" role="switch" (click)="toggleActiveStatus(staff)"
+                [attr.aria-checked]="staff.isActive"
+                class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]"
+                [ngClass]="staff.isActive ? 'bg-[#FF9500]' : 'bg-gray-300 dark:bg-gray-700'">
+                <span
+                  class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                  [ngClass]="staff.isActive ? 'translate-x-5' : 'translate-x-0'"></span>
+              </button>
+              <div class="text-[11px] font-semibold mt-1"
+                [ngClass]="staff.isActive ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400'">
+                {{ staff.isActive ? 'Active' : 'Disabled' }}
+              </div>
+            </td>
+
+            <!-- Action Buttons -->
+            <td class="py-4 px-4 sm:px-6 text-right">
+              <div class="flex items-center justify-end gap-1.5">
+                <button type="button" (click)="openEditModal(staff)"
+                  class="p-2 text-gray-600 dark:text-gray-300 hover:text-[#FF9500] hover:bg-orange-50 dark:hover:bg-orange-950/40 rounded-lg transition-colors focus-visible:outline-none"
+                  title="Edit staff details and permissions">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                </button>
+
+                <button type="button" (click)="deleteStaff(staff)"
+                  class="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors focus-visible:outline-none"
+                  title="Remove staff member">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+          } @empty {
+          <tr>
+            <td colspan="6" class="py-12 text-center text-gray-500 dark:text-gray-400 text-sm">
+              No matching staff members found.
+            </td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ================= POP-UP MODAL: CREATE / EDIT STAFF MEMBER ================= -->
+  @if (isModalOpen()) {
+  <div class="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-[2px] flex items-center justify-center p-4"
+    role="dialog" aria-modal="true" aria-labelledby="staff-modal-title" (click)="closeModal()">
+    <div
+      class="w-full max-w-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+      (click)="$event.stopPropagation()">
+      <!-- Modal Header -->
+      <div
+        class="p-5 sm:p-6 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between bg-white dark:bg-gray-900 sticky top-0 z-10">
+        <div>
+          <h2 id="staff-modal-title" class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <span>{{ selectedStaffType() === 'delivery_person' ? '🛵' : '🛡️' }}</span>
+            <span>{{ editingStaff() ? 'Edit Staff Member' : 'Create New Staff Member' }}</span>
+          </h2>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            {{ selectedStaffType() === 'delivery_person' ? 'Delivery Person for order dispatch & fulfillment' : 'Sub-Admin for managing store pages' }}
+          </p>
+        </div>
+
+        <button type="button" (click)="closeModal()" aria-label="Close modal"
+          class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+          ✕
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <form [formGroup]="staffForm" (ngSubmit)="saveStaff()" class="p-5 sm:p-6 space-y-5 max-h-[75vh] overflow-y-auto">
+        <!-- Error Banner -->
+        @if (formError()) {
+        <div role="alert"
+          class="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs sm:text-sm font-semibold flex items-center gap-2 animate-in fade-in">
+          <span>⚠️</span>
+          <span>{{ formError() }}</span>
+        </div>
+        }
+
+        <!-- 1. STAFF TYPE SELECTOR (Sub-Admin vs Delivery Person) -->
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2">
+            Select Staff Role / Type
+          </label>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <!-- Sub-Admin Option Card -->
+            <button type="button" (click)="setStaffType('sub_admin')"
+              class="p-3.5 rounded-xl border-2 text-left flex items-start gap-3 transition-all focus-visible:outline-none"
+              [ngClass]="selectedStaffType() === 'sub_admin' ? 'border-[#FF9500] bg-orange-50/40 dark:bg-orange-950/20 shadow-xs' : 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 bg-white dark:bg-gray-800/50'">
+              <span class="text-2xl shrink-0">🛡️</span>
+              <div class="min-w-0">
+                <div class="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-2">
+                  <span>Sub-Admin</span>
+                  @if (selectedStaffType() === 'sub_admin') {
+                  <span class="text-[#FF9500] text-xs font-black">✓ Selected</span>
+                  }
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  Admin decides which pages they can see with tick-marks (Orders, Products, etc.)
+                </p>
+              </div>
+            </button>
+
+            <!-- Delivery Person Option Card -->
+            <button type="button" (click)="setStaffType('delivery_person')"
+              class="p-3.5 rounded-xl border-2 text-left flex items-start gap-3 transition-all focus-visible:outline-none"
+              [ngClass]="selectedStaffType() === 'delivery_person' ? 'border-[#FF9500] bg-orange-50/40 dark:bg-orange-950/20 shadow-xs' : 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 bg-white dark:bg-gray-800/50'">
+              <span class="text-2xl shrink-0">🛵</span>
+              <div class="min-w-0">
+                <div class="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-2">
+                  <span>Delivery Person</span>
+                  @if (selectedStaffType() === 'delivery_person') {
+                  <span class="text-[#FF9500] text-xs font-black">✓ Selected</span>
+                  }
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  Logs in to view and update status of orders assigned to him by the Super Admin
+                </p>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. BASIC CREDENTIALS GRID -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <!-- Full Name -->
+          <div>
+            <label for="staff-name" class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+              Full Name *
+            </label>
+            <input id="staff-name" type="text" formControlName="name" placeholder="e.g. Amal Krishna"
+              class="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]" />
+          </div>
+
+          <!-- Phone Number -->
+          <div>
+            <label for="staff-phone" class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+              Phone Number (10 digits) *
+            </label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-xs font-mono text-gray-400">
+                +91
+              </span>
+              <input id="staff-phone" type="tel" formControlName="phone" placeholder="9847000444" maxlength="10"
+                class="w-full pl-12 pr-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm placeholder:text-gray-400 font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]" />
+            </div>
+          </div>
+
+          <!-- Email / Username for Login -->
+          <div>
+            <label for="staff-email" class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+              Email / Login Username *
+            </label>
+            <input id="staff-email" type="email" formControlName="email"
+              [placeholder]="selectedStaffType() === 'delivery_person' ? 'delivery@ebuyzy.in' : 'orders@ebuyzy.in'"
+              class="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]" />
+          </div>
+
+          <!-- Password -->
+          <div>
+            <label for="staff-password" class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+              Portal Password *
+            </label>
+            <input id="staff-password" type="text" formControlName="password"
+              [placeholder]="selectedStaffType() === 'delivery_person' ? 'delivery123' : 'order123'"
+              class="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm placeholder:text-gray-400 font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]" />
+          </div>
+        </div>
+
+        <!-- Role Title -->
+        <div>
+          <label for="staff-role" class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+            Designation / Role Title *
+          </label>
+          <input id="staff-role" type="text" formControlName="roleTitle"
+            [placeholder]="selectedStaffType() === 'delivery_person' ? 'Kakkanad Express Delivery Partner' : 'Order Dispatch Executive'"
+            class="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]" />
+        </div>
+
+        <!-- 3A. SPECIFIC TO DELIVERY PERSON: VEHICLE & ZONE DETAILS -->
+        @if (selectedStaffType() === 'delivery_person') {
+        <div class="p-4 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/60 space-y-4">
+          <div class="flex items-center gap-2">
+            <span class="text-lg">🛵</span>
+            <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-900 dark:text-emerald-300">
+              Delivery Partner Vehicle &amp; Zone
+            </h3>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label for="vehicle-type" class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                Vehicle Type
+              </label>
+              <input id="vehicle-type" type="text" formControlName="vehicleType"
+                placeholder="e.g. Honda Activa (Scooter)"
+                class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-gray-900 dark:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]" />
+            </div>
+
+            <div>
+              <label for="vehicle-num" class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                Vehicle Reg Number
+              </label>
+              <input id="vehicle-num" type="text" formControlName="vehicleNumber"
+                placeholder="KL-07-CD-4521"
+                class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-gray-900 dark:text-white font-mono uppercase focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]" />
+            </div>
+
+            <div>
+              <label for="delivery-zone" class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                Primary Zone
+              </label>
+              <input id="delivery-zone" type="text" formControlName="zone"
+                placeholder="Kakkanad & Infopark"
+                class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-gray-900 dark:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]" />
+            </div>
+          </div>
+
+          <div class="text-[11px] text-emerald-800 dark:text-emerald-300 bg-white dark:bg-gray-900 p-2.5 rounded-lg border border-emerald-200 dark:border-emerald-800">
+            &bull; Delivery Persons have access exclusively to their <strong>Assigned Deliveries</strong> dashboard to view customer drop addresses, open Google Maps, call customers, and complete deliveries.
+          </div>
+        </div>
+        }
+
+        <!-- 3B. SPECIFIC TO SUB-ADMIN: TICK-MARKED PAGE ACCESS CHECKBOXES -->
+        @if (selectedStaffType() === 'sub_admin') {
+        <div class="space-y-3 pt-2">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                Tick-Marked Page Permissions *
+              </label>
+              <p class="text-[11px] text-gray-500 dark:text-gray-400">
+                Super Admin decides which pages this Sub-Admin can see in the sidebar and access.
+              </p>
+            </div>
+
+            <!-- Quick Presets -->
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="text-[11px] font-semibold text-gray-400">Presets:</span>
+              <button type="button" (click)="applyPreset('order-manager')"
+                class="px-2 py-0.5 rounded text-[11px] font-bold bg-[#FFD600]/20 text-black dark:text-[#FFD600] border border-[#FFD600]/50 hover:bg-[#FFD600]/30 transition-colors">
+                Order Manager
+              </button>
+              <button type="button" (click)="applyPreset('orders-only')"
+                class="px-2 py-0.5 rounded text-[11px] font-bold bg-orange-50 dark:bg-orange-950/60 text-orange-800 dark:text-orange-300 border border-orange-200 hover:bg-orange-100 transition-colors">
+                Orders Only
+              </button>
+              <button type="button" (click)="applyPreset('inventory-manager')"
+                class="px-2 py-0.5 rounded text-[11px] font-bold bg-blue-50 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border border-blue-200 hover:bg-blue-100 transition-colors">
+                Inventory
+              </button>
+              <button type="button" (click)="applyPreset('all')"
+                class="px-2 py-0.5 rounded text-[11px] font-bold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 transition-colors">
+                All Pages
+              </button>
+            </div>
+          </div>
+
+          <!-- Permission Cards Grid -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            @for (perm of permissionDefinitions; track perm.id) {
+            <label
+              class="relative flex items-start gap-3 p-3.5 rounded-xl border-2 cursor-pointer transition-all select-none"
+              [ngClass]="
+                isPermissionSelected(perm.id)
+                  ? 'border-[#FF9500] bg-orange-50/40 dark:bg-orange-950/20 shadow-xs'
+                  : 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 bg-white dark:bg-gray-800/40'
+              ">
+              <input type="checkbox" [checked]="isPermissionSelected(perm.id)"
+                (change)="togglePermission(perm.id)"
+                class="mt-1 h-4 w-4 rounded border-gray-300 text-[#FF9500] focus:ring-[#FF9500] cursor-pointer" />
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center justify-between gap-1">
+                  <span class="font-bold text-xs text-gray-900 dark:text-white flex items-center gap-1.5">
+                    <span>{{ perm.icon }}</span>
+                    <span>{{ perm.label }}</span>
+                  </span>
+                  @if (perm.badge) {
+                  <span class="text-[10px] font-semibold text-gray-400">
+                    {{ perm.badge }}
+                  </span>
+                  }
+                </div>
+                <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+                  {{ perm.description }}
+                </p>
+              </div>
+            </label>
+            }
+          </div>
+        </div>
+        }
+
+        <!-- Modal Actions Footer -->
+        <div
+          class="pt-4 border-t border-gray-200 dark:border-gray-800 flex items-center justify-end gap-3 sticky bottom-0 bg-white dark:bg-gray-900">
+          <button type="button" (click)="closeModal()"
+            class="px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs font-bold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+            Cancel
+          </button>
+          <button type="submit" [disabled]="isSubmitting()"
+            class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#FF9500] to-[#FF4D00] hover:from-[#e08500] hover:to-[#e04000] text-white text-xs font-bold shadow-xs transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2">
+            <span>{{ editingStaff() ? 'Save Changes' : (selectedStaffType() === 'delivery_person' ? 'Create Delivery Partner' : 'Create Sub-Admin') }}</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+  }
+</div>
+
