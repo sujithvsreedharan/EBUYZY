@@ -174,10 +174,10 @@
           Create Password
         </label>
         <input id="signup-password" [type]="showPassword() ? 'text' : 'password'" formControlName="password"
-          placeholder="Minimum 4 characters"
+          placeholder="Minimum 8 characters"
           class="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500] focus-visible:border-transparent transition-colors" />
         @if (signUpForm.get('password')?.touched && signUpForm.get('password')?.invalid) {
-        <p class="text-[11px] text-rose-600 dark:text-rose-400 mt-1">Password must be at least 4 characters.</p>
+        <p class="text-[11px] text-rose-600 dark:text-rose-400 mt-1">Password must be at least 8 characters.</p>
         }
       </div>
 

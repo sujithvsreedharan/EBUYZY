@@ -81,12 +81,9 @@ export class UserLayout {
   }
 
   logout(): void {
-    const wasAdmin = this.authService.isAdmin();
     this.authService.logout();
-    if (wasAdmin) {
-      this.router.navigate(['/']).then(() => {
-        this.authService.openAuthModal('signin');
-      });
-    }
+    this.router.navigate(['/']).then(() => {
+      this.authService.openAuthModal('signin', 'You have signed out. Sign in anytime to continue shopping.');
+    });
   }
 }

@@ -46,6 +46,18 @@ export class DeliveryAreaModal {
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
+        console.log('GPS Coordinates:', { latitude, longitude });
+
+        // Query backend getStoreDetails API with GPS coordinates
+        this.settingsService.getStoreDetails(latitude, longitude).subscribe({
+          next: (storeRes) => {
+            console.log('Backend /api/getStoreDetails response:', storeRes);
+          },
+          error: (err) => {
+            console.error('getStoreDetails API error:', err);
+          }
+        });
+
         const result = this.deliveryService.checkCoordinates(latitude, longitude);
         this.checkResult.set(result);
         this.currentStep.set('result');

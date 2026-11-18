@@ -2,14 +2,23 @@
   <!-- Success Notification Banner -->
   @if (successNotice()) {
   <div role="alert"
-    class="p-4 rounded-xl bg-[#FFD600]/25 border border-[#FFD600]/70 text-black text-xs sm:text-sm font-bold flex items-center justify-between shadow-xs animate-in fade-in">
-    <div class="flex items-center gap-2">
-      <span class="text-base">✨</span>
-      <span>{{ successNotice() }}</span>
+    class="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs sm:text-sm font-bold flex items-center justify-between shadow-xs animate-in fade-in">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+      </div>
+      <div>
+        <p class="text-sm font-bold text-emerald-900">Success</p>
+        <p class="text-xs text-emerald-700 font-medium">{{ successNotice() }}</p>
+      </div>
     </div>
-    <button type="button" (click)="successNotice.set(null)"
-      class="p-1 text-gray-700 hover:text-black rounded text-xs font-bold">
-      ✕ Dismiss
+    <button type="button" (click)="successNotice.set(null)" aria-label="Dismiss notice"
+      class="text-emerald-500 hover:text-emerald-700 p-1.5 rounded-lg hover:bg-emerald-100 transition-colors">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+      </svg>
     </button>
   </div>
   }
@@ -32,6 +41,15 @@
 
     <!-- Header Action Button: Add Staff Member -->
     <div class="flex items-center gap-2.5 shrink-0 flex-wrap">
+      <button type="button" (click)="loadInitialData()" [disabled]="isLoading()"
+        class="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 hover:border-[#FF9500] bg-white dark:bg-gray-800 text-xs font-bold text-gray-800 dark:text-gray-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]"
+        title="Reload staff list and counts from database">
+        <svg class="w-3.5 h-3.5" [class.animate-spin]="isLoading()" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+        <span>{{ isLoading() ? 'Refreshing...' : 'Refresh' }}</span>
+      </button>
+
       <button type="button" (click)="openCreateModal('delivery_person')"
         class="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 hover:border-[#FF9500] bg-white dark:bg-gray-800 text-xs font-bold text-gray-800 dark:text-gray-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]">
         <span>🛵</span>
@@ -326,7 +344,17 @@
           } @empty {
           <tr>
             <td colspan="6" class="py-12 text-center text-gray-500 dark:text-gray-400 text-sm">
-              No matching staff members found.
+              <div class="max-w-sm mx-auto flex flex-col items-center gap-2">
+                <span class="text-3xl">👥</span>
+                <p class="font-bold text-gray-800 dark:text-gray-200">No staff members found</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                  @if (searchQuery()) {
+                    No staff members match "{{ searchQuery() }}". Try clearing the search.
+                  } @else {
+                    No staff members registered in the database yet. Click "+ Add Delivery Person" or "+ Add Sub-Admin" to create your first team account.
+                  }
+                </p>
+              </div>
             </td>
           </tr>
           }
@@ -372,11 +400,32 @@
         </div>
         }
 
-        <!-- 1. STAFF TYPE SELECTOR (Sub-Admin vs Delivery Person) -->
-        <div>
-          <label class="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2">
-            Select Staff Role / Type
-          </label>
+        <!-- 1. STAFF ROLE DROPDOWN & SELECTOR (PROC_STAFF_DETAILS Recordset 0) -->
+        <div class="space-y-3">
+          <div>
+            <label for="staff-role-select" class="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-1.5">
+              Select Staff Role *
+            </label>
+            <div class="relative">
+              <select
+                id="staff-role-select"
+                formControlName="roleId"
+                (change)="onRoleDropdownChange($any($event.target).value)"
+                class="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500] cursor-pointer appearance-none pr-10">
+                @for (role of staffRoles(); track role.id) {
+                  <option [value]="role.id">
+                    {{ role.id === 1001 ? '🛵' : '🛡️' }} {{ role.name }} - {{ role.desc || (role.id === 1001 ? 'Delivery Partner' : 'Sub-Admin') }}
+                  </option>
+                }
+              </select>
+              <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3.5 text-gray-500">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <!-- Sub-Admin Option Card -->
             <button type="button" (click)="setStaffType('sub_admin')"
@@ -403,7 +452,7 @@
               <span class="text-2xl shrink-0">🛵</span>
               <div class="min-w-0">
                 <div class="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-2">
-                  <span>Delivery Person</span>
+                  <span>Delivery Partner</span>
                   @if (selectedStaffType() === 'delivery_person') {
                   <span class="text-[#FF9500] text-xs font-black">✓ Selected</span>
                   }
@@ -596,7 +645,15 @@
           </button>
           <button type="submit" [disabled]="isSubmitting()"
             class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#FF9500] to-[#FF4D00] hover:from-[#e08500] hover:to-[#e04000] text-white text-xs font-bold shadow-xs transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2">
+            @if (isSubmitting()) {
+            <svg class="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24" fill="none">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+            </svg>
+            <span>Saving...</span>
+            } @else {
             <span>{{ editingStaff() ? 'Save Changes' : (selectedStaffType() === 'delivery_person' ? 'Create Delivery Partner' : 'Create Sub-Admin') }}</span>
+            }
           </button>
         </div>
       </form>

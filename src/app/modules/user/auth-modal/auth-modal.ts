@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
+import { SubAdminService } from '../../../core/services/sub-admin.service';
 
 @Component({
   selector: 'app-auth-modal',
@@ -13,6 +14,7 @@ import { AuthService } from '../../../core/services/auth.service';
 })
 export class AuthModal {
   protected readonly authService = inject(AuthService);
+  private readonly subAdminService = inject(SubAdminService);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
 
@@ -28,7 +30,7 @@ export class AuthModal {
   readonly signUpForm: FormGroup = this.fb.group({
     name: ['', [Validators.required, Validators.minLength(2)]],
     identifier: ['', [Validators.required, Validators.minLength(4)]],
-    password: ['', [Validators.required, Validators.minLength(4)]]
+    password: ['', [Validators.required, Validators.minLength(8)]]
   });
 
   switchMode(mode: 'signin' | 'signup'): void {
@@ -62,9 +64,14 @@ export class AuthModal {
         if (res.success && res.user) {
           const redirect = this.authService.postAuthRedirectUrl();
 
-          // If user is Admin -> redirect to /admin/dashboard
+          // Role-based routing for staff & admin or pending redirect for customers
           if (res.user.role === 'admin' || res.user.role === 'manager') {
-            this.router.navigate(['/admin/dashboard']);
+            this.router.navigateByUrl('/admin/dashboard');
+          } else if (res.user.role === 'delivery_person') {
+            this.router.navigateByUrl('/admin/assigned-orders');
+          } else if (res.user.role === 'sub_admin') {
+            const destination = this.subAdminService.getFirstAllowedRoute(res.user.permissions);
+            this.router.navigateByUrl(destination);
           } else if (redirect) {
             // If customer has a pending redirect (e.g. /checkout)
             this.router.navigateByUrl(redirect);

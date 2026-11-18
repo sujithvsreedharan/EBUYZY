@@ -135,6 +135,8 @@ export class AdminLayout {
 
   logout(): void {
     this.authService.logout();
-    this.router.navigate(['/admin/login']);
+    this.router.navigate(['/']).then(() => {
+      this.authService.openAuthModal('signin', 'You have signed out. Sign in anytime with your phone or email.');
+    });
   }
 }

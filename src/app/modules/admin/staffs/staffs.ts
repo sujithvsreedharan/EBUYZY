@@ -1,9 +1,9 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormsModule, FormBuilder, Validators } from '@angular/forms';
 import { SubAdminService } from '../../../core/services/sub-admin.service';
 import { AdminPagePermission, PERMISSION_DEFINITIONS, PermissionDefinition, StaffRecord, StaffType } from '../../../core/models/sub-admin.model';
-import { AuthService } from '../../../core/services/auth.service';
+import { AuthService, StaffRoleItem, StaffCounts, StaffApiItem } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-staffs',
@@ -12,7 +12,7 @@ import { AuthService } from '../../../core/services/auth.service';
   templateUrl: './staffs.html',
   styleUrl: './staffs.css'
 })
-export class Staffs {
+export class Staffs implements OnInit {
   private readonly fb = inject(FormBuilder);
   protected readonly staffService = inject(SubAdminService);
   protected readonly authService = inject(AuthService);
@@ -22,6 +22,16 @@ export class Staffs {
   // Search & Filter State
   readonly searchQuery = signal<string>('');
   readonly selectedFilter = signal<'all' | 'sub_admin' | 'delivery_person' | 'active'>('all');
+
+  // Backend Initial Data Signals (PROC_STAFF_DETAILS)
+  // Recordset 0: Staff roles dropdown
+  readonly staffRoles = signal<StaffRoleItem[]>([
+    { id: 1001, name: 'DELIVERY PARTNER', desc: 'Staff member who picks up and delivers orders to customers' },
+    { id: 1002, name: 'SUB ADMIN', desc: 'Staff manager who handles orders and stock and can add delivery partners' }
+  ]);
+  // Recordset 1: KPI dashboard counts
+  readonly staffCounts = signal<StaffCounts | null>(null);
+  readonly isLoading = signal<boolean>(false);
 
   // Modal State
   readonly isModalOpen = signal<boolean>(false);
@@ -37,10 +47,11 @@ export class Staffs {
 
   // Reactive Form
   readonly staffForm = this.fb.group({
+    roleId: [1002, [Validators.required]],
     name: ['', [Validators.required, Validators.minLength(2)]],
     email: ['', [Validators.required, Validators.email]],
-    phone: ['', [Validators.required, Validators.pattern(/^[6-9]\d{9}$/)]],
-    password: ['order123', [Validators.required, Validators.minLength(4)]],
+    phone: ['', [Validators.required, Validators.pattern(/^\d{10}$/)]],
+    password: ['order123', [Validators.required, Validators.minLength(8)]],
     roleTitle: ['Order Dispatch Executive', [Validators.required, Validators.minLength(2)]],
     vehicleType: ['Honda Activa (Scooter)'],
     vehicleNumber: ['KL-07-CD-4521'],
@@ -80,11 +91,101 @@ export class Staffs {
     });
   });
 
-  // KPI Computations
-  readonly totalStaffCount = computed(() => this.staffService.staffs().length);
-  readonly subAdminCount = computed(() => this.staffService.subAdminList().length);
-  readonly deliveryPersonCount = computed(() => this.staffService.deliveryPersons().length);
-  readonly activeCount = computed(() => this.staffService.staffs().filter((s) => s.isActive).length);
+  // KPI Computations from Backend Counts (Recordset 1) or local store fallback
+  readonly totalStaffCount = computed(() => {
+    const c = this.staffCounts();
+    if (c && typeof c.total === 'number') return c.total;
+    return this.staffService.staffs().length;
+  });
+  readonly subAdminCount = computed(() => {
+    const c = this.staffCounts();
+    if (c && typeof c.sub_admin === 'number') return c.sub_admin;
+    return this.staffService.subAdminList().length;
+  });
+  readonly deliveryPersonCount = computed(() => {
+    const c = this.staffCounts();
+    if (c && typeof c.delivery_part === 'number') return c.delivery_part;
+    return this.staffService.deliveryPersons().length;
+  });
+  readonly activeCount = computed(() => {
+    const c = this.staffCounts();
+    if (c && typeof c.active_emp === 'number') return c.active_emp;
+    return this.staffService.staffs().filter((s) => s.isActive).length;
+  });
+
+  ngOnInit(): void {
+    this.loadInitialData();
+  }
+
+  /**
+   * Load initial staff page data via GET /admin/staff/initial
+   * - Recordset 0: Staff roles dropdown
+   * - Recordset 1: KPI metric counts
+   * - Recordset 2: Staff roster list
+   */
+  loadInitialData(): void {
+    this.isLoading.set(true);
+    this.authService.getStaffInitial().subscribe({
+      next: (res) => {
+        this.isLoading.set(false);
+        if (res && res.success) {
+          // 1. Roles dropdown
+          if (Array.isArray(res.roles) && res.roles.length > 0) {
+            this.staffRoles.set(res.roles);
+          }
+          // 2. Counts
+          if (res.counts) {
+            this.staffCounts.set(res.counts);
+          }
+          // 3. Staff roster
+          if (Array.isArray(res.staff)) {
+            const existingMap = new Map(this.staffService.staffs().map((s) => [s.id, s]));
+            const mapped: StaffRecord[] = res.staff.map((item) => {
+              const isDelivery = String(item.role || '').toUpperCase().includes('DELIVERY');
+              const existing = existingMap.get(String(item.slno));
+              return {
+                id: String(item.slno),
+                type: isDelivery ? 'delivery_person' : 'sub_admin',
+                name: item.name,
+                email: item.email || '',
+                phone: item.phone || '',
+                password: existing?.password || (isDelivery ? 'delivery123' : 'order123'),
+                roleTitle: item.desc || (isDelivery ? 'Delivery Partner' : 'Sub-Admin'),
+                permissions: existing?.permissions || (isDelivery ? ['assigned_orders'] : ['orders', 'dashboard']),
+                vehicleType: item.vehicleType || existing?.vehicleType,
+                vehicleNumber: item.vehicleNumber || existing?.vehicleNumber,
+                zone: item.address || existing?.zone || 'Kakkanad, Kochi',
+                isActive: item.status === 1 || item.status === true,
+                createdAt: existing?.createdAt || new Date().toISOString()
+              };
+            });
+
+            if (mapped.length > 0 || (res.counts && res.counts.total === 0)) {
+              this.staffService.staffs.set(mapped);
+            }
+          }
+        }
+      },
+      error: (err) => {
+        this.isLoading.set(false);
+        console.warn('Initial staff data fetch warning:', err);
+      }
+    });
+  }
+
+  // Dropdown Change Handler
+  onRoleDropdownChange(roleIdValue: number | string): void {
+    const roleId = Number(roleIdValue);
+    this.staffForm.get('roleId')?.setValue(roleId);
+    const roleObj = this.staffRoles().find((r) => r.id === roleId);
+    const roleName = (roleObj?.name || '').toUpperCase();
+
+    if (roleId === 1001 || roleName.includes('DELIVERY')) {
+      this.setStaffType('delivery_person');
+    } else {
+      this.setStaffType('sub_admin');
+    }
+  }
 
   // Modal Controls
   openCreateModal(type: StaffType = 'sub_admin'): void {
@@ -93,7 +194,10 @@ export class Staffs {
     this.formError.set(null);
 
     const isDelivery = type === 'delivery_person';
+    const matchingRoleId = isDelivery ? 1001 : 1002;
+
     this.staffForm.reset({
+      roleId: matchingRoleId,
       name: '',
       email: '',
       phone: '',
@@ -111,6 +215,9 @@ export class Staffs {
   setStaffType(type: StaffType): void {
     this.selectedStaffType.set(type);
     const isDelivery = type === 'delivery_person';
+    const matchingRoleId = isDelivery ? 1001 : 1002;
+    this.staffForm.get('roleId')?.setValue(matchingRoleId);
+
     const currentTitle = this.staffForm.get('roleTitle')?.value;
 
     if (isDelivery && (!currentTitle || currentTitle === 'Order Dispatch Executive')) {
@@ -133,11 +240,15 @@ export class Staffs {
     this.selectedStaffType.set(staff.type || 'sub_admin');
     this.formError.set(null);
 
+    const isDelivery = staff.type === 'delivery_person';
+    const roleId = isDelivery ? 1001 : 1002;
+
     this.staffForm.patchValue({
+      roleId,
       name: staff.name,
       email: staff.email,
       phone: staff.phone,
-      password: staff.password || 'order123',
+      password: staff.password || (isDelivery ? 'delivery123' : 'order123'),
       roleTitle: staff.roleTitle,
       vehicleType: staff.vehicleType || '',
       vehicleNumber: staff.vehicleNumber || '',
@@ -194,6 +305,14 @@ export class Staffs {
   saveStaff(): void {
     if (this.staffForm.invalid) {
       this.staffForm.markAllAsTouched();
+      const controls = this.staffForm.controls;
+      let error = 'Please check the required fields.';
+      if (controls['name'].invalid) error = 'Please enter full name (at least 2 characters).';
+      else if (controls['phone'].invalid) error = 'Please enter a valid 10-digit mobile number.';
+      else if (controls['email'].invalid) error = 'Please enter a valid email address.';
+      else if (controls['password'].invalid) error = 'Password must be at least 8 characters.';
+      else if (controls['roleTitle'].invalid) error = 'Please enter role title / designation.';
+      this.formError.set(error);
       return;
     }
 
@@ -209,6 +328,7 @@ export class Staffs {
     this.formError.set(null);
 
     const formValues = this.staffForm.getRawValue();
+    const cleanPhone = String(formValues.phone || '').replace(/\D/g, '').slice(-10);
     const editing = this.editingStaff();
 
     if (editing) {
@@ -216,7 +336,7 @@ export class Staffs {
         type,
         name: formValues.name!,
         email: formValues.email!,
-        phone: formValues.phone!,
+        phone: cleanPhone,
         password: formValues.password!,
         roleTitle: formValues.roleTitle!,
         permissions: perms as AdminPagePermission[],
@@ -224,27 +344,45 @@ export class Staffs {
         vehicleNumber: formValues.vehicleNumber || undefined,
         zone: formValues.zone || undefined
       });
+      this.isSubmitting.set(false);
+      this.closeModal();
       this.showNotice(`Staff member "${formValues.name}" updated successfully!`);
     } else {
-      this.staffService.createStaff({
-        type,
-        name: formValues.name!,
-        email: formValues.email!,
-        phone: formValues.phone!,
-        password: formValues.password!,
-        roleTitle: formValues.roleTitle!,
-        permissions: perms as AdminPagePermission[],
-        vehicleType: formValues.vehicleType || undefined,
-        vehicleNumber: formValues.vehicleNumber || undefined,
-        zone: formValues.zone || undefined,
-        isActive: true
-      });
-      const typeLabel = type === 'delivery_person' ? 'Delivery Partner' : 'Sub-Admin';
-      this.showNotice(`${typeLabel} "${formValues.name}" created successfully!`);
-    }
+      const selectedRoleId = Number(formValues.roleId) || (type === 'delivery_person' ? 1001 : 1002);
+      const staffRole = selectedRoleId === 1001 ? 'DELIVERY_PARTNER' : 'SUB_ADMIN';
+      const typeLabel = staffRole === 'DELIVERY_PARTNER' ? 'Delivery Partner' : 'Sub-Admin';
 
-    this.isSubmitting.set(false);
-    this.closeModal();
+      // Register staff via backend API (POST /api/admin/staff)
+      this.authService
+        .registerStaff({
+          name: formValues.name!,
+          mobile: cleanPhone,
+          email: formValues.email!,
+          password: formValues.password!,
+          role: staffRole,
+          address: formValues.zone || formValues.vehicleNumber || undefined,
+          dept: 1,
+          desig: 1,
+          vehicleType: formValues.vehicleType || undefined,
+          vehicleNumber: formValues.vehicleNumber || undefined
+        })
+        .subscribe({
+          next: (res: any) => {
+            this.isSubmitting.set(false);
+            this.closeModal();
+            const msg = res?.message || `${typeLabel} "${formValues.name}" created successfully!`;
+            this.showNotice(msg);
+            // Refresh table list & counts directly from DB API without page reload
+            this.loadInitialData();
+          },
+          error: (err) => {
+            this.isSubmitting.set(false);
+            console.error('Backend staff registration error:', err);
+            const msg = err?.error?.message || err?.message || 'Failed to create staff account. Please try again.';
+            this.formError.set(msg);
+          }
+        });
+    }
   }
 
   // Row Action Handlers
@@ -280,7 +418,10 @@ export class Staffs {
 
   private showNotice(msg: string): void {
     this.successNotice.set(msg);
-    setTimeout(() => this.successNotice.set(null), 4000);
+    try {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch {}
+    setTimeout(() => this.successNotice.set(null), 5000);
   }
 }
 

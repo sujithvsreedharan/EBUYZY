@@ -147,6 +147,18 @@
             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" loading="lazy"
             onerror="this.src='https://images.unsplash.com/photo-1542838132-92c53300491e?w=200&auto=format&fit=crop&q=60'" />
 
+          @if (product.offerType === 'AMOUNT') {
+          <span
+            class="absolute top-2 right-2 px-2 py-0.5 rounded-md text-[10px] font-black bg-emerald-600 text-white shadow-xs">
+            ₹{{ product.offerValue ?? product.offerAmount ?? product.discountPrice }} OFF
+          </span>
+          } @else if (product.offerType === 'PERCENT') {
+          <span
+            class="absolute top-2 right-2 px-2 py-0.5 rounded-md text-[10px] font-black bg-emerald-600 text-white shadow-xs">
+            {{ (product.offerValue ?? product.offerPercentage ?? product.discountPercentage) | number:'1.0-0' }}% OFF
+          </span>
+          }
+
           @if (!product.inStock || product.stock === 0) {
           <span
             class="absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold bg-gray-900/80 text-white backdrop-blur-xs">
@@ -162,11 +174,21 @@
         <!-- Product Details -->
         <div class="p-3 sm:p-4 flex-1 flex flex-col justify-between space-y-3">
           <div>
-            <span
-              class="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider block mb-0.5">
-              {{ product.unit }}
-            </span>
-            <h3 class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white line-clamp-2 leading-snug"
+            <div class="flex items-center justify-between gap-1 mb-0.5">
+              <span
+                class="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider block">
+                {{ product.unit }}
+              </span>
+              @if (product.variants && product.variants.length > 1) {
+              <button type="button" (click)="openUnitModal(product)"
+                class="text-[10px] font-bold text-[#FF9500] dark:text-[#FFD600] bg-orange-50 dark:bg-orange-950/60 border border-orange-200 dark:border-orange-800/60 px-1.5 py-0.5 rounded-md hover:bg-orange-100 dark:hover:bg-orange-900/60 transition-colors flex items-center gap-0.5">
+                <span>{{ product.variants.length }} options</span>
+                <span>▾</span>
+              </button>
+              }
+            </div>
+            <h3 class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white line-clamp-2 leading-snug cursor-pointer"
+              (click)="product.variants && product.variants.length > 1 ? openUnitModal(product) : null"
               [title]="product.name">
               {{ product.name }}
             </h3>
@@ -175,39 +197,73 @@
           <!-- Price & Add Action -->
           <div class="pt-2 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between gap-2">
             <div>
-              <span class="text-sm sm:text-base font-extrabold text-gray-900 dark:text-white">
-                ₹{{ product.price }}
+              <div class="flex items-baseline gap-1.5 flex-wrap">
+                <span class="text-sm sm:text-base font-extrabold text-gray-900 dark:text-white">
+                  ₹{{ product.price }}
+                </span>
+                @if ((product.offerType === 'AMOUNT' || product.offerType === 'PERCENT') && product.mrp && product.mrp > product.price) {
+                <span class="text-xs text-gray-400 dark:text-gray-500 line-through font-normal">
+                  ₹{{ product.mrp }}
+                </span>
+                }
+              </div>
+              @if (product.offerType === 'AMOUNT') {
+              <span
+                class="text-[10px] sm:text-[11px] font-bold text-emerald-600 dark:text-emerald-400 block leading-tight">
+                ₹{{ product.offerValue ?? product.offerAmount ?? product.discountPrice }} OFF
               </span>
+              } @else if (product.offerType === 'PERCENT') {
+              <span
+                class="text-[10px] sm:text-[11px] font-bold text-emerald-600 dark:text-emerald-400 block leading-tight">
+                {{ (product.offerValue ?? product.offerPercentage ?? product.discountPercentage) | number:'1.0-0' }}% OFF
+              </span>
+              }
             </div>
 
-            <!-- Add to Cart or Stepper -->
+            <!-- Add to Cart or Stepper or Multi-unit Button -->
             <div>
-              @if (product.inStock && product.stock > 0) {
-              @if (getItemQty(product.id) === 0) {
-              <button type="button" (click)="addToCart(product)"
-                class="px-3 py-1.5 rounded-lg border-2 border-[#FF9500] text-[#FF9500] dark:text-[#FFD600] dark:border-[#FFD600] hover:bg-gradient-to-r hover:from-[#FF9500] hover:to-[#FF4D00] hover:text-white text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]">
-                ADD +
-              </button>
-              } @else {
-              <div
-                class="inline-flex items-center rounded-lg bg-gradient-to-r from-[#FF9500] to-[#FF4D00] text-white text-xs font-bold shadow-xs">
-                <button type="button" (click)="decrementItem(product.id)"
-                  class="px-2 py-1 hover:bg-black/10 rounded-l-lg" aria-label="Decrease quantity">
-                  &minus;
+              @if (product.variants && product.variants.length > 1) {
+                @if (getGroupCartQty(product) === 0) {
+                <button type="button" (click)="openUnitModal(product)"
+                  class="px-2.5 py-1.5 rounded-lg border-2 border-[#FF9500] text-[#FF9500] dark:text-[#FFD600] dark:border-[#FFD600] hover:bg-gradient-to-r hover:from-[#FF9500] hover:to-[#FF4D00] hover:text-white text-xs font-bold transition-all flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]">
+                  <span>ADD</span>
+                  <span class="text-[10px]">▾</span>
                 </button>
-                <span class="w-6 text-center font-mono font-bold">
-                  {{ getItemQty(product.id) }}
+                } @else {
+                <button type="button" (click)="openUnitModal(product)"
+                  class="px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-[#FF9500] to-[#FF4D00] text-white text-xs font-bold shadow-xs flex items-center gap-1">
+                  <span>{{ getGroupCartQty(product) }} in cart</span>
+                  <span class="text-[10px]">▾</span>
+                </button>
+                }
+              } @else {
+                @if (product.inStock && product.stock > 0) {
+                @if (getItemQty(product.id) === 0) {
+                <button type="button" (click)="addToCart(product)"
+                  class="px-3 py-1.5 rounded-lg border-2 border-[#FF9500] text-[#FF9500] dark:text-[#FFD600] dark:border-[#FFD600] hover:bg-gradient-to-r hover:from-[#FF9500] hover:to-[#FF4D00] hover:text-white text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]">
+                  ADD +
+                </button>
+                } @else {
+                <div
+                  class="inline-flex items-center rounded-lg bg-gradient-to-r from-[#FF9500] to-[#FF4D00] text-white text-xs font-bold shadow-xs">
+                  <button type="button" (click)="decrementItem(product.id)"
+                    class="px-2 py-1 hover:bg-black/10 rounded-l-lg" aria-label="Decrease quantity">
+                    &minus;
+                  </button>
+                  <span class="w-6 text-center font-mono font-bold">
+                    {{ getItemQty(product.id) }}
+                  </span>
+                  <button type="button" (click)="addToCart(product)" class="px-2 py-1 hover:bg-black/10 rounded-r-lg"
+                    aria-label="Increase quantity">
+                    +
+                  </button>
+                </div>
+                }
+                } @else {
+                <span class="text-xs font-semibold text-gray-400 dark:text-gray-500">
+                  Unavailable
                 </span>
-                <button type="button" (click)="addToCart(product)" class="px-2 py-1 hover:bg-black/10 rounded-r-lg"
-                  aria-label="Increase quantity">
-                  +
-                </button>
-              </div>
-              }
-              } @else {
-              <span class="text-xs font-semibold text-gray-400 dark:text-gray-500">
-                Unavailable
-              </span>
+                }
               }
             </div>
           </div>
@@ -258,6 +314,117 @@
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+  }
+
+  <!-- ================= UNIT / VARIANT SELECTOR POPUP MODAL ================= -->
+  @if (selectedProductForUnits(); as prod) {
+  <div class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
+    (click)="closeUnitModal()">
+    <div class="w-full sm:max-w-md bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[85vh] flex flex-col animate-in slide-in-from-bottom duration-200"
+      (click)="$event.stopPropagation()">
+      <!-- Modal Header -->
+      <div class="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-3 min-w-0">
+          <img [src]="prod.imageUrl" [alt]="prod.name"
+            class="w-12 h-12 rounded-xl object-cover border border-gray-200 dark:border-gray-700 shrink-0"
+            onerror="this.src='https://images.unsplash.com/photo-1542838132-92c53300491e?w=200&auto=format&fit=crop&q=60'" />
+          <div class="min-w-0">
+            <h3 class="text-sm sm:text-base font-extrabold text-gray-900 dark:text-white truncate">
+              {{ prod.name }}
+            </h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+              Select pack size / unit
+            </p>
+          </div>
+        </div>
+        <button type="button" (click)="closeUnitModal()" aria-label="Close unit selector"
+          class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 transition-colors">
+          &times;
+        </button>
+      </div>
+
+      <!-- Unit Options List -->
+      <div class="p-4 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800 space-y-3">
+        @for (variant of prod.variants; track variant.id) {
+        <div class="pt-3 first:pt-0 flex items-center justify-between gap-3">
+          <!-- Variant Details (unit, price, offer) -->
+          <div class="space-y-0.5">
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-bold text-gray-900 dark:text-white">
+                {{ variant.unit }}
+              </span>
+              @if (variant.offerType === 'AMOUNT') {
+              <span class="px-1.5 py-0.2 rounded text-[10px] font-black bg-emerald-600 text-white">
+                ₹{{ variant.offerValue ?? variant.offerAmount ?? variant.discountPrice }} OFF
+              </span>
+              } @else if (variant.offerType === 'PERCENT') {
+              <span class="px-1.5 py-0.2 rounded text-[10px] font-black bg-emerald-600 text-white">
+                {{ (variant.offerValue ?? variant.offerPercentage ?? variant.discountPercentage) | number:'1.0-0' }}% OFF
+              </span>
+              }
+            </div>
+
+            <div class="flex items-baseline gap-1.5">
+              <span class="text-sm font-extrabold text-gray-900 dark:text-white">
+                ₹{{ variant.price }}
+              </span>
+              @if (variant.mrp && variant.mrp > variant.price) {
+              <span class="text-xs text-gray-400 dark:text-gray-500 line-through">
+                ₹{{ variant.mrp }}
+              </span>
+              }
+            </div>
+
+            @if (!variant.inStock || variant.stock === 0) {
+            <span class="text-[10px] font-bold text-red-500 block">Out of stock</span>
+            } @else if (variant.stock < 10) {
+            <span class="text-[10px] font-medium text-amber-500 block">Only {{ variant.stock }} left</span>
+            }
+          </div>
+
+          <!-- Add / Stepper for this specific unit -->
+          <div>
+            @if (variant.inStock && variant.stock > 0) {
+              @if (getItemQty(variant.id) === 0) {
+              <button type="button" (click)="addToCart(variant)"
+                class="px-3.5 py-1.5 rounded-lg border-2 border-[#FF9500] text-[#FF9500] dark:text-[#FFD600] dark:border-[#FFD600] hover:bg-gradient-to-r hover:from-[#FF9500] hover:to-[#FF4D00] hover:text-white text-xs font-bold transition-colors">
+                ADD +
+              </button>
+              } @else {
+              <div class="inline-flex items-center rounded-lg bg-gradient-to-r from-[#FF9500] to-[#FF4D00] text-white text-xs font-bold shadow-xs">
+                <button type="button" (click)="decrementItem(variant.id)"
+                  class="px-2.5 py-1 hover:bg-black/10 rounded-l-lg transition-colors" aria-label="Decrease quantity">
+                  &minus;
+                </button>
+                <span class="w-6 text-center font-mono font-bold">
+                  {{ getItemQty(variant.id) }}
+                </span>
+                <button type="button" (click)="addToCart(variant)"
+                  class="px-2.5 py-1 hover:bg-black/10 rounded-r-lg transition-colors" aria-label="Increase quantity">
+                  +
+                </button>
+              </div>
+              }
+            } @else {
+            <span class="text-xs text-gray-400">Unavailable</span>
+            }
+          </div>
+        </div>
+        }
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-3 bg-gray-50 dark:bg-gray-800/60 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
+        <span class="text-xs text-gray-500 dark:text-gray-400">
+          {{ getGroupCartQty(prod) > 0 ? getGroupCartQty(prod) + ' items in basket' : 'Choose pack size to add' }}
+        </span>
+        <button type="button" (click)="closeUnitModal()"
+          class="px-4 py-1.5 rounded-lg bg-[#FF9500] text-white text-xs font-bold hover:bg-[#FF7700] transition-colors">
+          Done
         </button>
       </div>
     </div>

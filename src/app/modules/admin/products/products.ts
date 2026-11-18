@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -13,13 +13,13 @@ import { Product } from '../../../core/models/product.model';
   templateUrl: './products.html',
   styleUrl: './products.css',
 })
-export class Products {
+export class Products implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly productService = inject(AdminProductService);
   private readonly categoryService = inject(CategoryService);
 
   // Reactive data streams to Signals
-  readonly products = toSignal(this.productService.getProducts(), { initialValue: [] });
+  readonly products = signal<Product[]>([]);
   readonly categories = toSignal(this.categoryService.getCategories(), { initialValue: [] });
 
   // State Signals
@@ -29,17 +29,36 @@ export class Products {
   readonly editingProduct = signal<Product | null>(null);
   readonly productToDelete = signal<Product | null>(null);
   readonly isSubmitting = signal<boolean>(false);
+  readonly isDeleting = signal<boolean>(false);
+  readonly successMessage = signal<string | null>(null);
+  readonly errorMessage = signal<string | null>(null);
 
   // Reactive form for Add/Edit product
   readonly productForm: FormGroup = this.fb.group({
     name: ['', [Validators.required, Validators.minLength(2)]],
     categoryId: ['', [Validators.required]],
-    price: [null, [Validators.required, Validators.min(1)]],
+    mrp: [null, [Validators.required, Validators.min(1)]],
+    price: [null],
     unit: ['1 kg', [Validators.required]],
     imageUrl: ['', [Validators.required]],
     stock: [10, [Validators.required, Validators.min(0)]],
+    description: [''],
+    offerType: [''],
+    offerValue: [null],
+    isFeatured: [false],
     inStock: [true]
   });
+
+  ngOnInit(): void {
+    this.loadProducts();
+  }
+
+  loadProducts(): void {
+    this.productService.getProducts().subscribe({
+      next: (data) => this.products.set(data),
+      error: (err) => console.error('Failed to load products:', err)
+    });
+  }
 
   // KPI calculations
   readonly inStockCount = computed(() => this.products().filter((p) => p.inStock && p.stock > 0).length);
@@ -71,17 +90,28 @@ export class Products {
 
   // Inline stock actions
   incrementStock(product: Product): void {
-    this.productService.updateStock(product.id, product.stock + 1).subscribe();
+    this.productService.updateStock(product.id, { delta: 1 }).subscribe({
+      next: () => this.loadProducts()
+    });
   }
 
   decrementStock(product: Product): void {
     if (product.stock > 0) {
-      this.productService.updateStock(product.id, product.stock - 1).subscribe();
+      this.productService.updateStock(product.id, { delta: -1 }).subscribe({
+        next: () => this.loadProducts()
+      });
     }
   }
 
   toggleInStock(product: Product): void {
-    this.productService.toggleInStock(product.id).subscribe();
+    const nextActive = !product.isActive;
+    this.productService.updateProduct(product.id, {
+      ...product,
+      isActive: nextActive ? 1 : 0
+    }).subscribe({
+      next: () => this.loadProducts(),
+      error: (err) => console.error('Error toggling product status:', err)
+    });
   }
 
   // Modal open / close handlers
@@ -90,10 +120,15 @@ export class Products {
     this.productForm.reset({
       name: '',
       categoryId: this.categories()[0]?.id || '',
+      mrp: null,
       price: null,
       unit: '1 kg',
       imageUrl: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=300&auto=format&fit=crop&q=60',
       stock: 15,
+      description: '',
+      offerType: '',
+      offerValue: null,
+      isFeatured: false,
       inStock: true
     });
     this.isFormOpen.set(true);
@@ -101,14 +136,19 @@ export class Products {
 
   openEditModal(product: Product): void {
     this.editingProduct.set(product);
-    this.productForm.setValue({
+    this.productForm.patchValue({
       name: product.name,
       categoryId: product.categoryId,
-      price: product.price,
+      mrp: product.mrp ?? product.price,
+      price: product.sellingPrice ?? product.price,
       unit: product.unit,
-      imageUrl: product.imageUrl,
+      imageUrl: product.imageUrl || product.productImage || '',
       stock: product.stock,
-      inStock: product.inStock
+      description: product.details || '',
+      offerType: product.offerType || '',
+      offerValue: product.offerValue ?? null,
+      isFeatured: Boolean(product.isFeatured),
+      inStock: product.isActive !== undefined ? Boolean(product.isActive) : Boolean(product.inStock)
     });
     this.isFormOpen.set(true);
   }
@@ -137,38 +177,67 @@ export class Products {
     this.isSubmitting.set(true);
     const formVal = this.productForm.getRawValue();
     const categoryName = this.getCategoryName(formVal.categoryId);
+    const mrp = Number(formVal.mrp || formVal.price);
+    const sellingPrice = formVal.price ? Number(formVal.price) : mrp;
 
     if (this.editingProduct()) {
       this.productService
         .updateProduct(this.editingProduct()!.id, {
-          ...formVal,
-          categoryName
-        })
-        .subscribe({
-          next: () => {
-            this.isSubmitting.set(false);
-            this.closeFormModal();
-          },
-          error: () => this.isSubmitting.set(false)
-        });
-    } else {
-      this.productService
-        .addProduct({
           name: formVal.name,
           categoryId: formVal.categoryId,
           categoryName,
-          price: Number(formVal.price),
+          mrp,
+          sellingPrice,
+          price: sellingPrice,
           unit: formVal.unit,
           imageUrl: formVal.imageUrl,
           stock: Number(formVal.stock),
+          details: formVal.description,
+          offerType: formVal.offerType || null,
+          offerValue: formVal.offerValue ? Number(formVal.offerValue) : null,
+          isFeatured: Boolean(formVal.isFeatured),
+          isActive: formVal.inStock ? 1 : 0,
           inStock: Boolean(formVal.inStock)
         })
         .subscribe({
           next: () => {
             this.isSubmitting.set(false);
             this.closeFormModal();
+            this.loadProducts();
           },
           error: () => this.isSubmitting.set(false)
+        });
+    } else {
+      this.productService
+        .addProduct({
+          productName: formVal.name,
+          mrp: mrp,
+          sellingPrice: sellingPrice,
+          categoryId: formVal.categoryId ? Number(formVal.categoryId) : null,
+          categoryName: categoryName,
+          description: formVal.description || null,
+          unit: formVal.unit || '1 item',
+          stock: Number(formVal.stock || 0),
+          productImage: formVal.imageUrl || null,
+          isFeatured: Boolean(formVal.isFeatured),
+          offerType: formVal.offerType || null,
+          offerValue: formVal.offerValue ? Number(formVal.offerValue) : null,
+          // compatibility fields
+          name: formVal.name,
+          price: sellingPrice,
+          imageUrl: formVal.imageUrl,
+          inStock: Boolean(formVal.inStock)
+        })
+        .subscribe({
+          next: () => {
+            this.isSubmitting.set(false);
+            this.closeFormModal();
+            this.loadProducts();
+          },
+          error: (err) => {
+            console.error('Error adding product:', err);
+            this.isSubmitting.set(false);
+          }
         });
     }
   }
@@ -178,8 +247,22 @@ export class Products {
   }
 
   executeDelete(id: string): void {
+    this.isDeleting.set(true);
+    this.errorMessage.set(null);
+
     this.productService.deleteProduct(id).subscribe({
-      next: () => {
+      next: (res) => {
+        this.isDeleting.set(false);
+        this.productToDelete.set(null);
+        const msg = res?.message || 'Product deleted successfully.';
+        this.successMessage.set(msg);
+        this.loadProducts();
+        setTimeout(() => this.successMessage.set(null), 5000);
+      },
+      error: (err) => {
+        this.isDeleting.set(false);
+        console.error('Error deleting product:', err);
+        this.errorMessage.set(err?.error?.message || 'Failed to delete product.');
         this.productToDelete.set(null);
       }
     });

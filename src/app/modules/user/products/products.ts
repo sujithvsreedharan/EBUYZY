@@ -1,5 +1,5 @@
 import { Component, computed, inject, signal, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -7,6 +7,7 @@ import { AdminProductService } from '../../../core/services/admin-product.servic
 import { CategoryService } from '../../../core/services/category.service';
 import { CartService } from '../../../core/services/cart.service';
 import { Product } from '../../../core/models/product.model';
+import { Category } from '../../../core/models/category.model';
 
 export interface CategoryTile {
   id: string;
@@ -20,7 +21,7 @@ export interface CategoryTile {
 @Component({
   selector: 'app-user-products',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, DecimalPipe],
   templateUrl: './products.html',
   styleUrl: './products.css',
 })
@@ -31,8 +32,9 @@ export class Products implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
-  readonly products = toSignal(this.productService.getProducts(), { initialValue: [] });
-  readonly categories = toSignal(this.categoryService.getCategories(), { initialValue: [] });
+  readonly products = signal<Product[]>([]);
+  readonly categories = signal<Category[]>([]);
+  readonly totalProductsCount = signal<number>(0);
 
   readonly selectedCategoryId = signal<string>('all');
   readonly searchQuery = signal<string>('');
@@ -40,6 +42,28 @@ export class Products implements OnInit {
   readonly inStockOnly = signal<boolean>(false);
 
   ngOnInit(): void {
+    this.categoryService.getCategories().subscribe({
+      next: (response) => {
+        console.log('Categories in Products component:', response);
+        this.categories.set(response);
+      },
+      error: (error) => {
+        console.error('Category API error in Products:', error);
+      }
+    });
+
+    this.productService.getAllProductsResponse().subscribe({
+      next: (response) => {
+        console.log('Products page all products (Recordset 1):', response.products);
+        console.log('Products page total product count (Recordset 3):', response.totalRecords);
+        this.products.set(response.products);
+        this.totalProductsCount.set(response.totalRecords);
+      },
+      error: (error) => {
+        console.error('Products API error in Products page:', error);
+      }
+    });
+
     // Check if category is passed via query params (e.g. /products?category=cat-2)
     this.route.queryParams.subscribe((params) => {
       const cat = params['category'];
@@ -64,7 +88,17 @@ export class Products implements OnInit {
       'cat-3': '🥥',
       'cat-4': '🌶️',
       'cat-5': '🥛',
-      'cat-6': '🍌'
+      'cat-6': '🍌',
+      'FRUITS_VEG': '🥦',
+      'FRUITS-VEG': '🍎',
+      'GROCERY': '🌾',
+      'DAIRY_BREAKFAST': '🥛',
+      'DAIRY-EGGS': '🥚',
+      'BAKERY_STAPLES': '🍞',
+      'SNACKS': '🍿',
+      'SNACKS_BEV': '☕',
+      'BEVERAGES': '🧃',
+      'PERSONAL-CARE': '🧴'
     };
 
     const allTile: CategoryTile = {
@@ -79,10 +113,10 @@ export class Products implements OnInit {
     const tiles: CategoryTile[] = cats.map((c) => ({
       id: c.id,
       name: c.name,
-      slug: c.slug,
-      icon: iconsMap[c.id] || '🛒',
+      slug: c.slug || '',
+      icon: iconsMap[c.id] || (c.code ? iconsMap[c.code] : undefined) || '🛒',
       description: c.description || 'Fresh daily farm harvest',
-      count: allProds.filter((p) => p.categoryId === c.id).length
+      count: c.productCount ?? 0,
     }));
 
     return [allTile, ...tiles];
@@ -171,8 +205,33 @@ export class Products implements OnInit {
     this.inStockOnly.update((v) => !v);
   }
 
+  readonly selectedProductForUnits = signal<Product | null>(null);
+
   getItemQty(productId: string): number {
     return this.cartService.getItemQuantity(productId);
+  }
+
+  getGroupCartQty(product: Product): number {
+    if (!product.variants || product.variants.length <= 1) {
+      return this.cartService.getItemQuantity(product.id);
+    }
+    return product.variants.reduce((total, v) => total + this.cartService.getItemQuantity(v.id), 0);
+  }
+
+  openUnitModal(product: Product): void {
+    this.selectedProductForUnits.set(product);
+  }
+
+  closeUnitModal(): void {
+    this.selectedProductForUnits.set(null);
+  }
+
+  handleCardAddClick(product: Product): void {
+    if (product.variants && product.variants.length > 1) {
+      this.openUnitModal(product);
+    } else {
+      this.addToCart(product);
+    }
   }
 
   addToCart(product: Product): void {
