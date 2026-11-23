@@ -1,18 +1,19 @@
 import { Injectable, inject } from '@angular/core';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, BehaviorSubject, of, combineLatest } from 'rxjs';
-import { delay, map } from 'rxjs/operators';
+import { delay, map, tap } from 'rxjs/operators';
 import { Order, OrderStatus, OrderStats } from '../models/order.model';
 import { AdminProductService } from './admin-product.service';
+import { AuthService } from './auth.service';
+import { apiUrl } from '../../app.constant';
 
 /**
  * ============================================================================
  * ARCHITECTURAL RULE / BACKEND INTEGRATION NOTE:
  * ============================================================================
  * NEVER calculate prices, taxes, or delivery fees on the client for real orders!
- * The upcoming Node.js/Express + MSSQL backend MUST recompute item totals,
- * discount rules, delivery charges, and final order grand totals directly from the
- * Products table and Settings table inside a database transaction at checkout time.
- * Client-submitted line prices or order totals must be treated as untrusted.
+ * The Node.js/Express + MSSQL backend recomputes item totals, discount rules,
+ * delivery charges, and final order grand totals directly from the database.
  * ============================================================================
  */
 
@@ -20,204 +21,39 @@ import { AdminProductService } from './admin-product.service';
   providedIn: 'root'
 })
 export class AdminOrderService {
+  private readonly http = inject(HttpClient);
+  private readonly authService = inject(AuthService);
+  private readonly baseUrl = apiUrl;
   private readonly productService = inject(AdminProductService);
   private readonly STORAGE_KEY = 'ebuyzy_admin_orders';
 
-  // In-memory initial mock orders for EBUYZY (Kerala 3-5 km local deliveries)
-  private readonly DEFAULT_ORDERS: Order[] = [
-    {
-      id: 'ord-801',
-      orderNumber: 'EZ-2026-0801',
-      customer: {
-        name: 'Fathima Raheem',
-        phone: '9847123450',
-        address: 'Flat 4B, Olive Greens, Infopark Road, Kakkanad',
-        landmark: 'Opposite Infopark Gate 2',
-        coordinates: { lat: 10.0125, lng: 76.3562 }
-      },
-      items: [
-        { productId: 'prod-101', productName: 'Palakkadan Matta Rice (Vadi)', unit: '5 kg', unitPrice: 295, quantity: 1, total: 295 },
-        { productId: 'prod-102', productName: 'Fresh Mature Coconut', unit: '1 pc', unitPrice: 38, quantity: 2, total: 76 },
-        { productId: 'prod-106', productName: 'Fresh Green Curry Leaves', unit: '1 bunch', unitPrice: 12, quantity: 1, total: 12 }
-      ],
-      subtotal: 383,
-      deliveryFee: 25,
-      total: 408,
-      status: 'New',
-      notes: 'Please ring the doorbell, gate code 1044',
-      // Unassigned, ready for assignment
-      createdAt: new Date(Date.now() - 1000 * 60 * 18).toISOString(), // 18 mins ago
-      updatedAt: new Date(Date.now() - 1000 * 60 * 18).toISOString()
-    },
-    {
-      id: 'ord-802',
-      orderNumber: 'EZ-2026-0802',
-      customer: {
-        name: 'Rahul Menokh',
-        phone: '9447332211',
-        address: 'House No. 12, Sunrise Gardens, Padamugal, Kakkanad',
-        landmark: 'Near Padamugal Church',
-        coordinates: { lat: 10.0210, lng: 76.3385 }
-      },
-      items: [
-        { productId: 'prod-104', productName: 'Pure Cold-Pressed Coconut Oil', unit: '1 L', unitPrice: 310, quantity: 1, total: 310 },
-        { productId: 'prod-103', productName: 'Raw Nendran Banana', unit: '1 kg', unitPrice: 64, quantity: 2, total: 128 },
-        { productId: 'prod-105', productName: 'Fresh Tapioca (Nadan Kappa)', unit: '1 kg', unitPrice: 36, quantity: 2, total: 72 }
-      ],
-      subtotal: 510,
-      deliveryFee: 25,
-      total: 535,
-      status: 'Confirmed',
-      notes: 'Leave at front porch if not answering',
-      assignedDeliveryPersonId: 'staff_del_01',
-      assignedDeliveryPersonName: 'Amal Krishna',
-      assignedDeliveryPersonPhone: '9847000444',
-      assignedVehicle: 'Honda Activa (KL-07-CD-4521)',
-      assignedAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-      createdAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
-      updatedAt: new Date(Date.now() - 1000 * 60 * 30).toISOString()
-    },
-    {
-      id: 'ord-803',
-      orderNumber: 'EZ-2026-0803',
-      customer: {
-        name: 'Sunil George',
-        phone: '9946554433',
-        address: 'Villa 7, Asset Summit Suites, Vazhakkala',
-        landmark: 'Near Vazhakkala Temple',
-        coordinates: { lat: 10.0084, lng: 76.3267 }
-      },
-      items: [
-        { productId: 'prod-108', productName: 'Milma Toned Milk', unit: '500 ml', unitPrice: 27, quantity: 4, total: 108 },
-        { productId: 'prod-109', productName: 'Fresh Ginger', unit: '250 g', unitPrice: 48, quantity: 1, total: 48 },
-        { productId: 'prod-107', productName: 'Wayanad Whole Black Pepper', unit: '200 g', unitPrice: 195, quantity: 1, total: 195 }
-      ],
-      subtotal: 351,
-      deliveryFee: 25,
-      total: 376,
-      status: 'Out for delivery',
-      assignedDeliveryPersonId: 'staff_del_01',
-      assignedDeliveryPersonName: 'Amal Krishna',
-      assignedDeliveryPersonPhone: '9847000444',
-      assignedVehicle: 'Honda Activa (KL-07-CD-4521)',
-      assignedAt: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
-      createdAt: new Date(Date.now() - 1000 * 60 * 95).toISOString(),
-      updatedAt: new Date(Date.now() - 1000 * 60 * 25).toISOString()
-    },
-    {
-      id: 'ord-804',
-      orderNumber: 'EZ-2026-0804',
-      customer: {
-        name: 'Anjali Nair',
-        phone: '9744118822',
-        address: 'Apex Heights, Apt 8C, Edappally Toll, Kochi',
-        landmark: 'Opposite Metro Pillar 382',
-        coordinates: { lat: 10.0245, lng: 76.3120 }
-      },
-      items: [
-        { productId: 'prod-101', productName: 'Palakkadan Matta Rice', unit: '5 kg', unitPrice: 295, quantity: 2, total: 590 },
-        { productId: 'prod-110', productName: 'Idukki Green Cardamom', unit: '100 g', unitPrice: 275, quantity: 1, total: 275 }
-      ],
-      subtotal: 865,
-      deliveryFee: 25,
-      total: 890,
-      status: 'Delivered',
-      assignedDeliveryPersonId: 'staff_del_01',
-      assignedDeliveryPersonName: 'Amal Krishna',
-      assignedDeliveryPersonPhone: '9847000444',
-      assignedVehicle: 'Honda Activa (KL-07-CD-4521)',
-      assignedAt: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
-      createdAt: new Date(Date.now() - 1000 * 60 * 180).toISOString(),
-      updatedAt: new Date(Date.now() - 1000 * 60 * 70).toISOString()
-    },
-    {
-      id: 'ord-805',
-      orderNumber: 'EZ-2026-0805',
-      customer: {
-        name: 'Deepak Kurian',
-        phone: '9846003311',
-        address: 'B-14, Green Valley Enclave, Chittethukara, Kakkanad',
-        landmark: 'Near Chittethukara Juma Masjid',
-        coordinates: { lat: 10.0031, lng: 76.3615 }
-      },
-      items: [
-        { productId: 'prod-103', productName: 'Raw Nendran Banana', unit: '1 kg', unitPrice: 64, quantity: 3, total: 192 },
-        { productId: 'prod-104', productName: 'Pure Cold-Pressed Coconut Oil', unit: '1 L', unitPrice: 310, quantity: 1, total: 310 }
-      ],
-      subtotal: 502,
-      deliveryFee: 25,
-      total: 527,
-      status: 'Cancelled',
-      notes: 'Customer requested cancellation due to wrong address entered',
-      createdAt: new Date(Date.now() - 1000 * 60 * 240).toISOString(),
-      updatedAt: new Date(Date.now() - 1000 * 60 * 210).toISOString()
-    },
-    {
-      id: 'ord-806',
-      orderNumber: 'EZ-2026-0806',
-      customer: {
-        name: 'Parvathy Warrier',
-        phone: '9895012399',
-        address: 'Haritha Nagar 3rd Cross, Palarivattom, Kochi',
-        landmark: 'Behind Medical Centre',
-        coordinates: { lat: 10.0055, lng: 76.3078 }
-      },
-      items: [
-        { productId: 'prod-102', productName: 'Fresh Mature Coconut', unit: '1 pc', unitPrice: 38, quantity: 4, total: 152 },
-        { productId: 'prod-108', productName: 'Milma Toned Milk', unit: '500 ml', unitPrice: 27, quantity: 2, total: 54 },
-        { productId: 'prod-105', productName: 'Fresh Tapioca (Nadan Kappa)', unit: '1 kg', unitPrice: 36, quantity: 3, total: 108 }
-      ],
-      subtotal: 314,
-      deliveryFee: 25,
-      total: 339,
-      status: 'New',
-      notes: 'Call before arriving',
-      createdAt: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
-      updatedAt: new Date(Date.now() - 1000 * 60 * 5).toISOString()
-    },
-    {
-      id: 'ord-807',
-      orderNumber: 'EZ-2026-0807',
-      customer: {
-        name: 'Mathews Thomas',
-        phone: '9745112233',
-        address: 'Tower C - 1102, Purva Eternity, Kakkanad',
-        landmark: 'Opposite Rajagiri College',
-        coordinates: { lat: 10.0162, lng: 76.3688 }
-      },
-      items: [
-        { productId: 'prod-101', productName: 'Palakkadan Matta Rice', unit: '5 kg', unitPrice: 295, quantity: 1, total: 295 },
-        { productId: 'prod-107', productName: 'Wayanad Whole Black Pepper', unit: '200 g', unitPrice: 195, quantity: 2, total: 390 }
-      ],
-      subtotal: 685,
-      deliveryFee: 25,
-      total: 710,
-      status: 'Out for delivery',
-      assignedDeliveryPersonId: 'staff_del_02',
-      assignedDeliveryPersonName: 'Vishnu Prasad',
-      assignedDeliveryPersonPhone: '9847000555',
-      assignedVehicle: 'TVS Jupiter (KL-07-EF-8822)',
-      assignedAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
-      createdAt: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
-      updatedAt: new Date(Date.now() - 1000 * 60 * 15).toISOString()
-    }
-  ];
+  // No demo orders - live clean state
+  private readonly DEFAULT_ORDERS: Order[] = [];
 
   private readonly ordersSubject = new BehaviorSubject<Order[]>(this.loadFromStorage());
+
+  constructor() {
+    this.clearAllDemoOrders();
+    if (this.authService.isAuthenticated()) {
+      this.fetchAdminOrders().subscribe({ error: () => { } });
+    }
+  }
 
   private loadFromStorage(): Order[] {
     try {
       const data = localStorage.getItem(this.STORAGE_KEY);
       if (data) {
         const parsed = JSON.parse(data);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+        if (Array.isArray(parsed)) {
+          const cleanOrders = parsed.filter((o: any) => !String(o.id || '').startsWith('ord-80'));
+          localStorage.setItem(this.STORAGE_KEY, JSON.stringify(cleanOrders));
+          return cleanOrders;
         }
       }
     } catch {
       // Fallback
     }
-    return this.DEFAULT_ORDERS;
+    return [];
   }
 
   private persist(orders: Order[]): void {
@@ -228,6 +64,142 @@ export class AdminOrderService {
     }
     this.ordersSubject.next(orders);
   }
+
+  clearAllDemoOrders(): void {
+    const clean = this.ordersSubject.value.filter(o => !String(o.id || '').startsWith('ord-80'));
+    this.persist(clean);
+  }
+
+  private mapBackendStatusToFrontend(status: string): OrderStatus {
+    const s = (status || '').toUpperCase().trim();
+    switch (s) {
+      case 'PENDING':
+      case 'NEW':
+        return 'New';
+      case 'CONFIRMED':
+        return 'Confirmed';
+      case 'PACKING':
+      case 'PREPARING':
+        return 'Packing';
+      case 'PACKED':
+        return 'Packed';
+      case 'OUT_FOR_DELIVERY':
+      case 'DISPATCHED':
+        return 'Out for delivery';
+      case 'DELIVERED':
+        return 'Delivered';
+      case 'CANCELLED':
+        return 'Cancelled';
+      default:
+        return 'New';
+    }
+  }
+
+  mapBackendAdminOrder(o: any): Order {
+    const items = Array.isArray(o.items)
+      ? o.items.map((i: any) => ({
+        productId: String(i.productId || i.product_dr || i.orderItemId || Math.random()),
+        productName: i.productName || i.name || 'Product',
+        unit: i.unit || 'unit',
+        unitPrice: Number(i.unitPrice ?? i.price ?? 0),
+        quantity: Number(i.quantity ?? 1),
+        total: Number(i.lineTotal ?? i.total ?? ((Number(i.unitPrice || 0)) * (Number(i.quantity || 1))))
+      }))
+      : [];
+
+    return {
+      id: String(o.orderId || o.orderCode),
+      orderNumber: o.orderCode || `ORD-${o.orderId}`,
+      customer: {
+        name: o.customerName || 'Customer',
+        phone: o.customerMobile || '',
+        address: o.deliveryAddress || ''
+      },
+      items,
+      subtotal: Number(o.subtotal ?? o.totalAmount ?? 0),
+      deliveryFee: Number(o.deliveryCharge ?? 0),
+      total: Number(o.totalAmount ?? o.subtotal ?? 0),
+      status: this.mapBackendStatusToFrontend(o.orderStatus),
+      notes: o.note || o.orderNote || '',
+      assignedDeliveryPersonName: o.deliveryStaffName,
+      assignedDeliveryPersonPhone: o.deliveryStaffMobile,
+      createdAt: o.orderedAt || new Date().toISOString(),
+      updatedAt: o.updatedAt || o.orderedAt || new Date().toISOString()
+    };
+  }
+
+  addPlacedOrder(order: Order): void {
+    const list = this.ordersSubject.value;
+    const exists = list.some(o => o.id === order.id || o.orderNumber === order.orderNumber);
+    if (!exists) {
+      const nextList = [order, ...list];
+      this.persist(nextList);
+    }
+  }
+
+  /**
+   * Real backend Order Status Update API: POST /api/admin/orders/status
+   */
+  updateOrderStatusApi(orderId: number | string, newStatus: string, note?: string): Observable<{ success: boolean; order?: any; message?: string }> {
+    const token = this.authService.getToken();
+    const headers = token ? new HttpHeaders({ Authorization: `Bearer ${token}` }) : undefined;
+    const numericId = Number(orderId);
+
+    return this.http.post<{ success: boolean; order?: any; message?: string }>(
+      `${this.baseUrl}/api/admin/orders/status`,
+      { orderId: numericId, status: newStatus, note: note || undefined },
+      { headers }
+    );
+  }
+
+  /**
+   * Real backend Customer Cancel Order API: POST /api/orders/cancel
+   */
+  cancelOrderApi(orderId: number | string, reason?: string): Observable<{ success: boolean; order?: any; message?: string }> {
+    const token = this.authService.getToken();
+    const headers = token ? new HttpHeaders({ Authorization: `Bearer ${token}` }) : undefined;
+    const numericId = Number(orderId);
+
+    return this.http.post<{ success: boolean; order?: any; message?: string }>(
+      `${this.baseUrl}/api/orders/cancel`,
+      { orderId: numericId, reason: reason || undefined },
+      { headers }
+    );
+  }
+
+  /**
+   * Fetch all real admin orders from backend: POST /api/admin/orders
+   */
+  fetchAdminOrders(): Observable<{ success: boolean; orders: any[]; pagination: any }> {
+    const token = this.authService.getToken();
+    const headers = token ? new HttpHeaders({ Authorization: `Bearer ${token}` }) : undefined;
+
+    return this.http.post<{ success: boolean; orders: any[]; pagination: any }>(
+      `${this.baseUrl}/api/admin/orders`,
+      { pageNumber: 1, pageSize: 100 },
+      { headers }
+    ).pipe(
+      tap((res) => {
+        if (res.success && Array.isArray(res.orders)) {
+          const mapped: Order[] = res.orders.map((o: any) => this.mapBackendAdminOrder(o));
+          this.ordersSubject.next(mapped);
+          this.persist(mapped);
+        } else {
+          this.ordersSubject.next([]);
+          this.persist([]);
+        }
+      })
+    );
+  }
+
+  // private persist(orders: Order[]): void {
+  //   try {
+  //     localStorage.setItem(this.STORAGE_KEY, JSON.stringify(orders));
+  //   } catch {
+  //     // Ignore
+  //   }
+  //   this.ordersSubject.next(orders);
+  // }
 
   createOrder(orderData: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>): Observable<Order> {
     const now = new Date().toISOString();
@@ -241,6 +213,81 @@ export class AdminOrderService {
     const nextList = [createdOrder, ...this.ordersSubject.value];
     this.persist(nextList);
     return of(createdOrder).pipe(delay(200));
+  }
+
+  /**
+   * Real backend Order Placement API: POST /api/orders/place
+   */
+  placeOrderApi(payload: {
+    addressId?: number | null;
+    customerName?: string | null;
+    customerMobile?: string | null;
+    deliveryAddress?: string | null;
+    note?: string | null;
+  }): Observable<{ success: boolean; order?: any; items?: any[]; message?: string }> {
+    const token = this.authService.getToken();
+    const headers = token ? new HttpHeaders({ Authorization: `Bearer ${token}` }) : undefined;
+
+    return this.http.post<{ success: boolean; order?: any; items?: any[]; message?: string }>(
+      `${this.baseUrl}/api/orders/place`,
+      payload,
+      { headers }
+    );
+  }
+
+  /**
+   * Fetch customer's real orders: POST /api/me/orders
+   */
+  getMyOrders(params: { pageNumber?: number; pageSize?: number; filter?: string; status?: string; search?: string } = {}): Observable<{
+    success: boolean;
+    counts?: { allCount: number; activeCount: number; deliveredCount: number };
+    orders: any[];
+    pagination?: any;
+    pageNumber?: number;
+    pageSize?: number;
+  }> {
+    const token = this.authService.getToken();
+    const headers = token ? new HttpHeaders({ Authorization: `Bearer ${token}` }) : undefined;
+
+    const rawFilter = (params.filter || params.status || 'ALL').toUpperCase();
+    const filter = ['ALL', 'ACTIVE', 'DELIVERED'].includes(rawFilter) ? rawFilter : 'ALL';
+
+    return this.http.post<{
+      success: boolean;
+      counts?: { allCount: number; activeCount: number; deliveredCount: number };
+      orders: any[];
+      pagination?: any;
+      pageNumber?: number;
+      pageSize?: number;
+    }>(
+      `${this.baseUrl}/api/me/orders`,
+      {
+        filter,
+        search: params.search || undefined,
+        pageNumber: params.pageNumber || 1,
+        pageSize: params.pageSize || 50
+      },
+      { headers }
+    );
+  }
+
+  /**
+   * Fetch order details: POST /api/orders/details
+   */
+  getOrderDetailsApi(orderId: number | string): Observable<{ success: boolean; order: any; items: any[]; history: any[] }> {
+    const token = this.authService.getToken();
+    const headers = token ? new HttpHeaders({ Authorization: `Bearer ${token}` }) : undefined;
+
+    const numericId = Number(orderId);
+    const body = !isNaN(numericId) && numericId > 0
+      ? { orderId: numericId }
+      : { orderCode: String(orderId) };
+
+    return this.http.post<{ success: boolean; order: any; items: any[]; history: any[] }>(
+      `${this.baseUrl}/api/orders/details`,
+      body,
+      { headers }
+    );
   }
 
   getOrders(): Observable<Order[]> {
@@ -290,7 +337,51 @@ export class AdminOrderService {
     );
   }
 
-  updateOrderStatus(id: string, newStatus: OrderStatus): Observable<Order> {
+  updateOrderStatus(id: string, newStatus: OrderStatus, note?: string): Observable<Order> {
+    const numericId = Number(id);
+    const statusMap: Record<OrderStatus, string> = {
+      'New': 'PENDING',
+      'Confirmed': 'CONFIRMED',
+      'Packing': 'PREPARING',
+      'Packed': 'PREPARING',
+      'Out for delivery': 'OUT_FOR_DELIVERY',
+      'Delivered': 'DELIVERED',
+      'Cancelled': 'CANCELLED'
+    };
+    const dbStatus = statusMap[newStatus] || newStatus;
+
+    if (!isNaN(numericId) && numericId > 0 && this.authService.isAuthenticated()) {
+      return this.updateOrderStatusApi(numericId, dbStatus, note).pipe(
+        map(() => {
+          const list = this.ordersSubject.value;
+          const index = list.findIndex(o => o.id === id || o.orderNumber === id);
+          const updated: Order = index !== -1 ? {
+            ...list[index],
+            status: newStatus,
+            updatedAt: new Date().toISOString()
+          } : {
+            id: String(numericId),
+            orderNumber: `ORD-${numericId}`,
+            customer: { name: '', phone: '', address: '' },
+            items: [],
+            subtotal: 0,
+            deliveryFee: 0,
+            total: 0,
+            status: newStatus,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
+
+          if (index !== -1) {
+            const nextList = [...list];
+            nextList[index] = updated;
+            this.persist(nextList);
+          }
+          return updated;
+        })
+      );
+    }
+
     const list = this.ordersSubject.value;
     const index = list.findIndex(o => o.id === id || o.orderNumber === id);
     if (index === -1) {
@@ -327,8 +418,8 @@ export class AdminOrderService {
     }
 
     const currentOrder = list[index];
-    // If order was still 'New', advancing assignment automatically moves it to 'Confirmed'
-    const newStatus: OrderStatus = currentOrder.status === 'New' ? 'Confirmed' : currentOrder.status;
+    // Keep current order workflow status upon assignment
+    const newStatus: OrderStatus = currentOrder.status;
 
     const updated: Order = {
       ...currentOrder,
@@ -408,7 +499,9 @@ export class AdminOrderService {
         const todayStr = new Date().toDateString();
         const ordersTodayList = orders.filter(o => new Date(o.createdAt).toDateString() === todayStr);
 
-        const pendingOrders = orders.filter(o => o.status === 'New' || o.status === 'Confirmed').length;
+        const pendingOrders = orders.filter(
+          o => o.status === 'New' || o.status === 'Confirmed' || o.status === 'Packing' || o.status === 'Packed'
+        ).length;
         const revenueToday = ordersTodayList
           .filter(o => o.status !== 'Cancelled')
           .reduce((acc, curr) => acc + curr.total, 0);

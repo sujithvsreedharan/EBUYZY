@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { AdminOrderService } from '../../../core/services/admin-order.service';
-import { SubAdminService } from '../../../core/services/sub-admin.service';
 import { Order, OrderStatus } from '../../../core/models/order.model';
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component';
 
@@ -19,7 +18,6 @@ type FilterStatus = 'All' | OrderStatus;
 })
 export class Orders implements OnInit {
   private readonly orderService = inject(AdminOrderService);
-  protected readonly staffService = inject(SubAdminService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
@@ -31,18 +29,21 @@ export class Orders implements OnInit {
   readonly searchQuery = signal<string>('');
   readonly selectedOrder = signal<Order | null>(null);
   readonly confirmingCancel = signal<boolean>(false);
-  readonly assignmentNotice = signal<string | null>(null);
 
   readonly statusTabs: FilterStatus[] = [
     'All',
     'New',
-    'Confirmed',
+    'Packing',
+    'Packed',
     'Out for delivery',
     'Delivered',
     'Cancelled'
   ];
 
   ngOnInit(): void {
+    // Fetch live orders from backend
+    this.refreshOrders();
+
     // Check if routed with a specific orderId query param (e.g., from Dashboard)
     this.route.queryParams.subscribe((params) => {
       const orderId = params['orderId'];
@@ -53,6 +54,12 @@ export class Orders implements OnInit {
           }
         });
       }
+    });
+  }
+
+  refreshOrders(): void {
+    this.orderService.fetchAdminOrders().subscribe({
+      error: () => {}
     });
   }
 
@@ -69,9 +76,7 @@ export class Orders implements OnInit {
         order.orderNumber.toLowerCase().includes(query) ||
         order.customer.phone.includes(query) ||
         order.customer.name.toLowerCase().includes(query) ||
-        order.customer.address.toLowerCase().includes(query) ||
-        (order.assignedDeliveryPersonName &&
-          order.assignedDeliveryPersonName.toLowerCase().includes(query));
+        order.customer.address.toLowerCase().includes(query);
 
       return matchesStatus && matchesQuery;
     });
@@ -102,39 +107,10 @@ export class Orders implements OnInit {
     this.orderService.updateOrderStatus(order.id, nextStatus).subscribe({
       next: (updated) => {
         this.selectedOrder.set(updated);
-      }
-    });
-  }
-
-  assignDeliveryPartner(order: Order, deliveryPersonId: string): void {
-    if (!deliveryPersonId) {
-      return;
-    }
-
-    const partner = this.staffService.staffs().find((s) => s.id === deliveryPersonId);
-    if (!partner) return;
-
-    this.orderService
-      .assignDeliveryPartner(
-        order.id,
-        partner.id,
-        partner.name,
-        partner.phone,
-        partner.vehicleNumber || partner.vehicleType || 'Delivery Bike'
-      )
-      .subscribe({
-        next: (updated) => {
-          this.selectedOrder.set(updated);
-          this.showNotice(`Assigned #${order.orderNumber} to ${partner.name}! 🛵`);
-        }
-      });
-  }
-
-  unassignDeliveryPartner(order: Order): void {
-    this.orderService.unassignDeliveryPartner(order.id).subscribe({
-      next: (updated) => {
-        this.selectedOrder.set(updated);
-        this.showNotice(`Unassigned delivery partner from #${order.orderNumber}`);
+        this.refreshOrders();
+      },
+      error: (err) => {
+        alert(err?.error?.message || err?.message || 'Failed to update order status');
       }
     });
   }
@@ -165,9 +141,6 @@ export class Orders implements OnInit {
       `Current Status: ${order.status}\n` +
       `Total: ₹${order.total}\n` +
       `Delivery Address: ${order.customer.address}\n\n` +
-      (order.assignedDeliveryPersonName
-        ? `Assigned Delivery Partner: ${order.assignedDeliveryPersonName} (${order.assignedDeliveryPersonPhone || ''})\n\n`
-        : '') +
       `Thank you for choosing EBUYZY Kakkanad!`;
 
     return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
@@ -177,8 +150,10 @@ export class Orders implements OnInit {
     const rank: Record<OrderStatus, number> = {
       New: 1,
       Confirmed: 2,
-      'Out for delivery': 3,
-      Delivered: 4,
+      Packing: 2,
+      Packed: 3,
+      'Out for delivery': 4,
+      Delivered: 5,
       Cancelled: -1
     };
 
@@ -196,10 +171,5 @@ export class Orders implements OnInit {
     } else {
       return 'bg-gray-100 text-gray-400';
     }
-  }
-
-  private showNotice(msg: string): void {
-    this.assignmentNotice.set(msg);
-    setTimeout(() => this.assignmentNotice.set(null), 3500);
   }
 }

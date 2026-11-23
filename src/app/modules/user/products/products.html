@@ -184,10 +184,21 @@
       <div
         class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden flex flex-col justify-between hover:border-gray-300 dark:hover:border-gray-700 transition-colors">
         <!-- Image Container with stock badge & offer badge -->
-        <div class="relative aspect-square bg-gray-50 dark:bg-gray-800 overflow-hidden">
+        <div (click)="openProductDetailModal(product)" class="relative aspect-square bg-gray-50 dark:bg-gray-800 overflow-hidden cursor-pointer group">
           <img [src]="product.imageUrl" [alt]="product.name"
             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" loading="lazy"
-            onerror="this.src='https://images.unsplash.com/photo-1542838132-92c53300491e?w=200&auto=format&fit=crop&q=60'" />
+            onerror="this.src='/logo/ebuyzy-icon-2.png'" />
+
+          <!-- Quick View Indicator on hover -->
+          <div class="absolute inset-0 bg-black/15 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+            <span class="px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-xs text-white text-[11px] font-semibold flex items-center gap-1 shadow-sm">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              View
+            </span>
+          </div>
 
           @if (product.offerType === 'AMOUNT') {
           <span
@@ -233,8 +244,8 @@
               </span>
               }
             </div>
-            <h3 class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white line-clamp-2 leading-snug cursor-pointer"
-              (click)="product.variants && product.variants.length > 1 ? openUnitModal(product) : null"
+            <h3 class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white line-clamp-2 leading-snug cursor-pointer hover:text-[#FF9500] transition-colors"
+              (click)="openProductDetailModal(product)"
               [title]="product.name">
               {{ product.name }}
             </h3>
@@ -348,7 +359,7 @@
         <div class="flex items-center gap-3 min-w-0">
           <img [src]="prod.imageUrl" [alt]="prod.name"
             class="w-12 h-12 rounded-xl object-cover border border-gray-200 dark:border-gray-700 shrink-0"
-            onerror="this.src='https://images.unsplash.com/photo-1542838132-92c53300491e?w=200&auto=format&fit=crop&q=60'" />
+            onerror="this.src='/logo/ebuyzy-icon-2.png'" />
           <div class="min-w-0">
             <h3 class="text-sm sm:text-base font-extrabold text-gray-900 dark:text-white truncate">
               {{ prod.name }}
@@ -446,5 +457,14 @@
       </div>
     </div>
   </div>
+  }
+
+  <!-- ================= PRODUCT DETAIL QUICK VIEW POPUP MODAL ================= -->
+  @if (selectedProductForDetail(); as detailProd) {
+    <app-product-detail-modal
+      [product]="detailProd"
+      (close)="closeProductDetailModal()"
+      (addToCart)="addToCart($event)"
+      (decrement)="decrementItem($event)" />
   }
 </div>

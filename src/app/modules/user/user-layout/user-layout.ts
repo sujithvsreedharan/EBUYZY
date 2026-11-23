@@ -86,4 +86,8 @@ export class UserLayout {
       this.authService.openAuthModal('signin', 'You have signed out. Sign in anytime to continue shopping.');
     });
   }
+
+  navigateTo(path: string): void {
+    this.router.navigate([path]);
+  }
 }

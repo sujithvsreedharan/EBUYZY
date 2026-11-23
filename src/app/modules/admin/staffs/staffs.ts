@@ -51,11 +51,11 @@ export class Staffs implements OnInit {
     name: ['', [Validators.required, Validators.minLength(2)]],
     email: ['', [Validators.required, Validators.email]],
     phone: ['', [Validators.required, Validators.pattern(/^\d{10}$/)]],
-    password: ['order123', [Validators.required, Validators.minLength(8)]],
-    roleTitle: ['Order Dispatch Executive', [Validators.required, Validators.minLength(2)]],
-    vehicleType: ['Honda Activa (Scooter)'],
-    vehicleNumber: ['KL-07-CD-4521'],
-    zone: ['Kakkanad & Infopark']
+    password: ['', [Validators.required, Validators.minLength(8)]],
+    roleTitle: ['', [Validators.required, Validators.minLength(2)]],
+    vehicleType: [''],
+    vehicleNumber: [''],
+    zone: ['']
   });
 
   // Filtered staff list

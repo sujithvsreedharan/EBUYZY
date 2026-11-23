@@ -31,10 +31,12 @@ export class Checkout implements OnInit {
   readonly locationDetected = signal<{ lat: number; lng: number } | null>(null);
   readonly locationError = signal<string | null>(null);
   readonly isSubmitting = signal<boolean>(false);
+  readonly orderSuccessMessage = signal<string | null>(null);
 
   readonly checkoutForm: FormGroup = this.fb.group({
     name: ['', [Validators.required, Validators.minLength(2)]],
     phone: ['', [Validators.required, Validators.pattern(/^[6-9]\d{9}$/)]],
+    gpsLocation: ['', [Validators.required, Validators.minLength(3)]],
     address: ['', [Validators.required, Validators.minLength(6)]],
     landmark: [''],
     notes: [''],
@@ -61,19 +63,67 @@ export class Checkout implements OnInit {
 
     // 3. Pre-fill user data if signed in
     const user = this.authService.currentUser();
-    const loc = this.deliveryService.selectedLocation();
-    let initialAddress = user?.address || '';
-    if (!initialAddress && loc?.verified && loc.isDeliverable) {
-      initialAddress = `${loc.locality}, Kakkanad - ${loc.pincode}`;
-    }
-
     if (user) {
       this.checkoutForm.patchValue({
-        name: user.name,
+        name: user.name || '',
         phone: user.phone || '',
-        address: initialAddress
+        address: '',
+        gpsLocation: ''
       });
     }
+
+    // 4. Fetch real saved address & GPS from backend database
+    this.authService.getUserProfileApi().subscribe({
+      next: (res) => {
+        if (res.success) {
+          const profile = res.profile || res.user;
+          const addresses = res.addresses || [];
+          const defaultAddr = addresses.find((a: any) => a.isDefault) || addresses[0];
+
+          if (defaultAddr) {
+            const savedName = defaultAddr.recipient || defaultAddr.fullName || profile?.name;
+            const savedPhone = defaultAddr.mobile || profile?.mobile || profile?.phone;
+            let savedAddress = defaultAddr.main_address || defaultAddr.addressLine1 || defaultAddr.address || '';
+            let savedGps = defaultAddr.address2 || defaultAddr.addressLine2 || '';
+
+            // If GPS is inside savedAddress string e.g. "Flat 2, Infopark [GPS: 9.99° N, 76.35° E]"
+            if (!savedGps && savedAddress.includes('[GPS:')) {
+              const match = savedAddress.match(/\[GPS:\s*([^\]]+)\]/i);
+              if (match) {
+                savedGps = match[1].trim();
+                savedAddress = savedAddress.replace(/\[GPS:\s*[^\]]+\]/i, '').trim();
+              }
+            }
+
+            // If landmark has GPS coordinates
+            if (!savedGps && defaultAddr.landmark && (defaultAddr.landmark.includes('°') || defaultAddr.landmark.includes('GPS:'))) {
+              savedGps = defaultAddr.landmark.replace(/^GPS:\s*/i, '').trim();
+            }
+
+            this.checkoutForm.patchValue({
+              name: savedName || this.checkoutForm.get('name')?.value || '',
+              phone: savedPhone || this.checkoutForm.get('phone')?.value || '',
+              address: savedAddress,
+              gpsLocation: savedGps,
+              landmark: defaultAddr.landmark && !defaultAddr.landmark.includes('°') && !defaultAddr.landmark.includes('GPS:') ? defaultAddr.landmark : ''
+            });
+
+            if (savedGps) {
+              const latLngMatch = savedGps.match(/([0-9.]+)[°\s]*[NS][,\s]+([0-9.]+)[°\s]*[EW]/i);
+              if (latLngMatch) {
+                this.locationDetected.set({ lat: parseFloat(latLngMatch[1]), lng: parseFloat(latLngMatch[2]) });
+              }
+            }
+          } else if (profile) {
+            this.checkoutForm.patchValue({
+              name: profile.name || this.checkoutForm.get('name')?.value || '',
+              phone: profile.mobile || profile.phone || this.checkoutForm.get('phone')?.value || ''
+            });
+          }
+        }
+      },
+      error: (err) => console.warn('Could not fetch saved address from backend:', err)
+    });
   }
 
   detectLocation(): void {
@@ -93,10 +143,15 @@ export class Checkout implements OnInit {
           lng: Number(pos.coords.longitude.toFixed(4))
         };
         this.locationDetected.set(coords);
+        this.checkoutForm.patchValue({
+          gpsLocation: `${coords.lat}° N, ${coords.lng}° E`
+        });
+        this.checkoutForm.get('gpsLocation')?.markAsTouched();
+        this.checkoutForm.get('gpsLocation')?.updateValueAndValidity();
       },
       () => {
         this.isLocating.set(false);
-        this.locationError.set('Could not fetch GPS location. Please enter your address manually.');
+        this.locationError.set('Could not fetch GPS location. Please allow browser location access or type your location manually.');
       },
       { timeout: 10000, enableHighAccuracy: true }
     );
@@ -114,6 +169,66 @@ export class Checkout implements OnInit {
 
     this.isSubmitting.set(true);
     const formVal = this.checkoutForm.getRawValue();
+    let fullAddress = formVal.address;
+    if (formVal.landmark) {
+      fullAddress += ` (Landmark: ${formVal.landmark})`;
+    }
+    const gpsInfo = formVal.gpsLocation || (this.locationDetected() ? `${this.locationDetected()?.lat}° N, ${this.locationDetected()?.lng}° E` : '');
+    if (gpsInfo) {
+      fullAddress += ` [GPS: ${gpsInfo}]`;
+    }
+
+    // If authenticated, place real order via backend POST /api/orders/place
+    if (this.authService.currentUser()?.id || this.authService.getToken()) {
+      // Save address & GPS to backend database so it's remembered for future orders
+      this.authService
+        .saveAddressApi({
+          address: formVal.address,
+          gps: formVal.gpsLocation,
+          locality: formVal.landmark || formVal.gpsLocation,
+          name: formVal.name,
+          phone: formVal.phone
+        })
+        .subscribe({
+          error: (err) => console.warn('Could not save address to user profile:', err)
+        });
+
+      this.orderService
+        .placeOrderApi({
+          customerName: formVal.name,
+          customerMobile: formVal.phone,
+          deliveryAddress: fullAddress,
+          note: formVal.notes || undefined
+        })
+        .subscribe({
+          next: (res) => {
+            this.isSubmitting.set(false);
+            if (res.success && res.order) {
+              const orderRef = res.order.orderCode || String(res.order.orderId);
+              this.orderSuccessMessage.set(`Order #${orderRef} placed successfully!`);
+
+              // Sync placed order into client order service so details load immediately
+              const mapped = this.orderService.mapBackendAdminOrder({
+                ...res.order,
+                items: res.items || []
+              });
+              this.orderService.addPlacedOrder(mapped);
+
+              this.cartService.clearCart();
+              setTimeout(() => {
+                this.router.navigate(['/order-success', orderRef]);
+              }, 1200);
+            } else {
+              alert(res.message || 'Failed to place order.');
+            }
+          },
+          error: (err) => {
+            this.isSubmitting.set(false);
+            alert(err?.error?.message || 'Failed to place order. Please try again.');
+          }
+        });
+      return;
+    }
 
     const orderNumber = `EZ-2026-${Date.now().toString().slice(-4)}`;
 
@@ -148,8 +263,11 @@ export class Checkout implements OnInit {
       .subscribe({
         next: (created) => {
           this.isSubmitting.set(false);
+          this.orderSuccessMessage.set(`Order #${created.orderNumber} placed successfully!`);
           this.cartService.clearCart();
-          this.router.navigate(['/order-success', created.id]);
+          setTimeout(() => {
+            this.router.navigate(['/order-success', created.id]);
+          }, 1200);
         },
         error: () => {
           this.isSubmitting.set(false);

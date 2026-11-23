@@ -11,77 +11,115 @@
     <div class="md:col-span-2 space-y-6">
       <div
         class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5 sm:p-7 shadow-xs space-y-6 transition-colors">
-        <div>
-          <h1 class="text-xl font-bold text-gray-900 dark:text-white">Delivery Information</h1>
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Kerala local delivery (3-5 km radius, Kakkanad
-            &amp; nearby)</p>
+        <div class="border-b border-gray-100 dark:border-gray-800 pb-3">
+          <h1 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <span>📍</span>
+            <span>Delivery Information</span>
+          </h1>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            Local delivery in Kakkanad &amp; nearby (order for yourself or type details to order for another person)
+          </p>
         </div>
 
+        @if (orderSuccessMessage()) {
+        <div class="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-200 text-sm font-bold flex items-center gap-3 animate-fadeIn">
+          <span class="text-2xl">🎉</span>
+          <div>
+            <p>{{ orderSuccessMessage() }}</p>
+            <p class="text-xs font-normal opacity-90 mt-0.5">Your grocery order has been successfully saved in our system. Redirecting you to confirmation...</p>
+          </div>
+        </div>
+        }
+
         <form [formGroup]="checkoutForm" (ngSubmit)="placeOrder()" class="space-y-4" novalidate>
-          <!-- Customer Name & Phone -->
+          <!-- Name & Mobile Number -->
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label for="custName" class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                Full name <span class="text-rose-600">*</span>
+              <label for="custName" class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
+                Name <span class="text-rose-600">*</span>
               </label>
-              <input id="custName" type="text" formControlName="name" placeholder="e.g. Rahul Menokh"
-                class="w-full px-3.5 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]" />
+              <input id="custName" type="text" formControlName="name" placeholder="Enter recipient's name"
+                class="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]" />
               @if (checkoutForm.get('name')?.invalid && checkoutForm.get('name')?.touched) {
-              <p class="text-xs text-rose-600 dark:text-rose-400 mt-1">Please enter your name</p>
+              <p class="text-xs text-rose-600 dark:text-rose-400 mt-1">Please enter recipient's name</p>
               }
             </div>
 
             <div>
-              <label for="custPhone" class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                Phone number (10 digits) <span class="text-rose-600">*</span>
+              <label for="custPhone" class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
+                Mobile Number <span class="text-rose-600">*</span>
               </label>
-              <div class="relative">
+              <div class="relative flex">
                 <span
-                  class="absolute inset-y-0 left-0 pl-3 flex items-center text-xs font-bold text-gray-500 dark:text-gray-400">+91</span>
-                <input id="custPhone" type="tel" maxlength="10" formControlName="phone" placeholder="9847123450"
-                  class="w-full pl-11 pr-3.5 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]" />
+                  class="inline-flex items-center px-3 rounded-l-xl border border-r-0 border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs font-bold text-gray-500 dark:text-gray-400 font-mono">
+                  +91
+                </span>
+                <input id="custPhone" type="tel" maxlength="10" formControlName="phone"
+                  placeholder="10-digit mobile number"
+                  class="w-full px-3.5 py-2.5 rounded-r-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]" />
               </div>
               @if (checkoutForm.get('phone')?.invalid && checkoutForm.get('phone')?.touched) {
-              <p class="text-xs text-rose-600 dark:text-rose-400 mt-1">Enter a valid 10-digit Indian phone number</p>
+              <p class="text-xs text-rose-600 dark:text-rose-400 mt-1">Enter a valid 10-digit mobile number</p>
               }
             </div>
           </div>
 
-          <!-- Address -->
+          <!-- User GPS Location / Geo Location -->
           <div>
             <div class="flex items-center justify-between mb-1">
-              <label for="custAddress" class="block text-xs font-semibold text-gray-700 dark:text-gray-300">
-                Delivery address in Kerala <span class="text-rose-600">*</span>
+              <label for="custGps" class="block text-xs font-bold text-gray-700 dark:text-gray-300">
+                User GPS Location <span class="text-rose-600">*</span>
               </label>
 
-              <!-- Geolocation GPS auto-detect button -->
+              <!-- Add location button -->
               <button type="button" (click)="detectLocation()" [disabled]="isLocating()"
-                class="inline-flex items-center gap-1.5 text-xs text-[#FF9500] dark:text-[#FFD600] font-semibold hover:underline focus-visible:outline-none">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#FFD600]/25 hover:bg-[#FFD600]/40 text-gray-900 dark:text-yellow-300 border border-[#FFD600]/50 text-xs font-bold transition-all cursor-pointer">
+                <svg class="w-3.5 h-3.5 text-[#FF9500]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                 </svg>
-                <span>{{ isLocating() ? 'Detecting GPS...' : 'Use my current location' }}</span>
+                <span>{{ isLocating() ? 'Adding location...' : 'Add location' }}</span>
               </button>
             </div>
 
-            <textarea id="custAddress" rows="3" formControlName="address"
-              placeholder="House/Flat number, building name, street, Kakkanad, Kochi..."
-              class="w-full px-3.5 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]"></textarea>
-            @if (checkoutForm.get('address')?.invalid && checkoutForm.get('address')?.touched) {
-            <p class="text-xs text-rose-600 dark:text-rose-400 mt-1">Address is required for delivery</p>
-            }
-
-            @if (locationDetected(); as loc) {
-            <div
-              class="mt-2 p-2 bg-[#FFD600]/20 border border-[#FFD600]/50 rounded-lg text-black dark:text-[#FFD600] text-xs flex items-center justify-between">
-              <span>GPS coordinates detected: {{ loc.lat }}&deg;N, {{ loc.lng }}&deg;E</span>
-              <span class="font-bold">Google Maps Linked</span>
+            <div class="relative">
+              <input id="custGps" type="text" formControlName="gpsLocation"
+                placeholder="Click 'Add location' or enter GPS coordinates"
+                class="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-xs font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]" />
+              @if (locationDetected()) {
+              <span
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                <span>✓</span>
+                <span>GPS Linked</span>
+              </span>
+              }
             </div>
+
+            @if (checkoutForm.get('gpsLocation')?.invalid && checkoutForm.get('gpsLocation')?.touched) {
+            <p class="text-xs text-rose-600 dark:text-rose-400 mt-1">Geo location is mandatory. Please click "Add location" or enter your delivery location.</p>
             }
 
             @if (locationError()) {
             <p class="text-xs text-amber-700 dark:text-amber-400 mt-1">{{ locationError() }}</p>
+            }
+          </div>
+
+          <!-- Address is typing for to order for another person -->
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label for="custAddress" class="block text-xs font-bold text-gray-700 dark:text-gray-300">
+                Address <span class="text-rose-600">*</span>
+              </label>
+              <span class="text-[11px] text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-800/60 font-medium">
+                Type address to order for another person
+              </span>
+            </div>
+
+            <textarea id="custAddress" rows="3" formControlName="address"
+              placeholder="Type complete delivery address (House/Flat no, building name, street, area) - type here to order for another person..."
+              class="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]"></textarea>
+            @if (checkoutForm.get('address')?.invalid && checkoutForm.get('address')?.touched) {
+            <p class="text-xs text-rose-600 dark:text-rose-400 mt-1">Address is mandatory for delivery</p>
             }
           </div>
 
@@ -134,7 +172,7 @@
 
           <!-- Submit Order Button -->
           <div class="pt-4">
-            <button type="submit" [disabled]="checkoutForm.invalid || isSubmitting()"
+            <button type="submit" [disabled]="checkoutForm.invalid || isSubmitting() || !!orderSuccessMessage()"
               class="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#FF9500] to-[#FF4D00] hover:from-[#e08500] hover:to-[#e04000] text-white font-extrabold text-sm transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]">
               @if (isSubmitting()) {
               <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
@@ -144,6 +182,8 @@
                 </path>
               </svg>
               <span>Placing order...</span>
+              } @else if (orderSuccessMessage()) {
+              <span>✓ Order Saved Successfully!</span>
               } @else {
               <span>Place Order &bull; ₹{{ cartService.grandTotal() | number }}</span>
               }
@@ -206,7 +246,8 @@
           <div
             class="pt-2 border-t border-gray-200 dark:border-gray-700 flex justify-between text-sm font-bold text-gray-900 dark:text-white">
             <span>Grand total</span>
-            <span class="text-[#FF4D00] dark:text-[#FF9500] text-base font-extrabold">₹{{ cartService.grandTotal() | number
+            <span class="text-[#FF4D00] dark:text-[#FF9500] text-base font-extrabold">₹{{ cartService.grandTotal() |
+              number
               }}</span>
           </div>
         </div>
@@ -216,8 +257,7 @@
       <div
         class="p-4 rounded-xl bg-[#FFD600]/15 dark:bg-[#FFD600]/10 border border-[#FFD600]/40 text-black dark:text-gray-100 text-xs space-y-1.5">
         <div class="font-bold flex items-center gap-1.5 text-black dark:text-[#FFD600]">
-          <svg class="w-4 h-4 text-[#FF9500] dark:text-[#FFD600]" fill="none" stroke="currentColor"
-            viewBox="0 0 24 24">
+          <svg class="w-4 h-4 text-[#FF9500] dark:text-[#FFD600]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
           </svg>

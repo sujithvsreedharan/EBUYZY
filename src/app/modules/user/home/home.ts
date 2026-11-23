@@ -9,11 +9,12 @@ import { CartService } from '../../../core/services/cart.service';
 import { SettingsService } from '../../../core/services/settings.service';
 import { Product } from '../../../core/models/product.model';
 import { Category } from '../../../core/models/category.model';
+import { ProductDetailModalComponent } from '../../../shared/components/product-detail-modal/product-detail-modal.component';
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, FormsModule, DecimalPipe, RouterLink],
+  imports: [CommonModule, FormsModule, DecimalPipe, RouterLink, ProductDetailModalComponent],
   templateUrl: './home.html',
   styleUrl: './home.css',
 })
@@ -75,6 +76,15 @@ export class Home implements OnInit {
   });
 
   readonly selectedProductForUnits = signal<Product | null>(null);
+  readonly selectedProductForDetail = signal<Product | null>(null);
+
+  openProductDetailModal(product: Product): void {
+    this.selectedProductForDetail.set(product);
+  }
+
+  closeProductDetailModal(): void {
+    this.selectedProductForDetail.set(null);
+  }
 
   selectCategory(catId: string): void {
     this.selectedCategoryId.set(catId);

@@ -24,33 +24,9 @@ export class Login {
   protected readonly errorMessage = signal<string | null>(null);
 
   protected readonly loginForm = this.fb.group({
-    identifier: ['admin@ebuyzy.in', [Validators.required, Validators.minLength(3)]],
-    password: ['admin123', [Validators.required, Validators.minLength(4)]]
+    identifier: ['', [Validators.required, Validators.minLength(3)]],
+    password: ['', [Validators.required, Validators.minLength(4)]]
   });
-
-  setQuickLogin(type: 'admin' | 'subadmin' | 'delivery' | 'customer'): void {
-    if (type === 'admin') {
-      this.loginForm.setValue({
-        identifier: 'admin@ebuyzy.in',
-        password: 'admin123'
-      });
-    } else if (type === 'subadmin') {
-      this.loginForm.setValue({
-        identifier: 'orders@ebuyzy.in',
-        password: 'order123'
-      });
-    } else if (type === 'delivery') {
-      this.loginForm.setValue({
-        identifier: 'delivery@ebuyzy.in',
-        password: 'delivery123'
-      });
-    } else {
-      this.loginForm.setValue({
-        identifier: 'rahul@ebuyzy.in',
-        password: 'user123'
-      });
-    }
-  }
 
   onSubmit(): void {
     if (this.loginForm.invalid) {

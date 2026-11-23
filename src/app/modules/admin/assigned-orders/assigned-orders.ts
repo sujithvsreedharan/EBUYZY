@@ -95,7 +95,7 @@ export class AssignedOrders implements OnInit {
     return orders.filter((o) => {
       // Status filter
       if (statusFilter === 'active') {
-        if (o.status !== 'Confirmed' && o.status !== 'Out for delivery' && o.status !== 'New') {
+        if (o.status === 'Delivered' || o.status === 'Cancelled') {
           return false;
         }
       } else if (statusFilter === 'delivered') {
@@ -120,7 +120,7 @@ export class AssignedOrders implements OnInit {
 
   // KPI computations for assigned orders
   readonly activeDeliveriesCount = computed(() => {
-    return this.assignedOrders().filter((o) => o.status === 'Confirmed' || o.status === 'Out for delivery').length;
+    return this.assignedOrders().filter((o) => o.status !== 'Delivered' && o.status !== 'Cancelled').length;
   });
 
   readonly completedTodayCount = computed(() => {
@@ -129,7 +129,7 @@ export class AssignedOrders implements OnInit {
 
   readonly cashToCollectTotal = computed(() => {
     return this.assignedOrders()
-      .filter((o) => o.status === 'Confirmed' || o.status === 'Out for delivery')
+      .filter((o) => o.status !== 'Delivered' && o.status !== 'Cancelled')
       .reduce((sum, curr) => sum + curr.total, 0);
   });
 

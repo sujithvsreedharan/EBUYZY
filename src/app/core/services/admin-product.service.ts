@@ -40,6 +40,25 @@ export class AdminProductService {
   }
 
   /**
+   * Helper to resolve local product images or fall back to /logo/ebuyzy-icon-2.png
+   */
+  resolveImageUrl(img: string | null | undefined): string {
+    if (!img || typeof img !== 'string') return '/logo/ebuyzy-icon-2.png';
+    const trimmed = img.trim();
+    if (!trimmed || trimmed.includes('unsplash.com')) return '/logo/ebuyzy-icon-2.png';
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:') || trimmed.startsWith('/logo/')) {
+      return trimmed;
+    }
+    if (trimmed.startsWith('/uploads/')) {
+      return `${this.apiUrl}${trimmed}`;
+    }
+    if (trimmed.startsWith('uploads/')) {
+      return `${this.apiUrl}/${trimmed}`;
+    }
+    return `${this.apiUrl}/uploads/products/${trimmed}`;
+  }
+
+  /**
    * Helper to map database table headings / API recordset 1 to frontend Product model:
    * id, code, product, categoryId, category, details, unit, mrp, sellingPrice,
    * discountPrice, discountPercentage, stock, productImage, IS_FEATURED, IS_ACTIVE
@@ -69,6 +88,11 @@ export class AdminProductService {
     const offerAmount = raw.offerAmount != null ? Number(raw.offerAmount) : null;
     const offerPercentage = raw.offerPercentage != null ? Number(raw.offerPercentage) : null;
 
+    const rawGallery = raw.galleryImages || raw.GALLERY_IMAGES || [];
+    const galleryImages = Array.isArray(rawGallery)
+      ? rawGallery.map((g: any) => this.resolveImageUrl(typeof g === 'string' ? g : (g.IMAGE_URL || g.imageUrl)))
+      : [];
+
     return {
       id: String(raw.id ?? raw.PRODUCT_SLNO ?? ''),
       code: raw.code || raw.PRODUCT_CODE || '',
@@ -85,8 +109,9 @@ export class AdminProductService {
       discountPercentage: discountPercentage,
       price: price,
       stock: stockNum,
-      imageUrl: raw.productImage || raw.PRODUCT_IMAGE || raw.imageUrl || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=500&auto=format&fit=crop&q=60',
+      imageUrl: this.resolveImageUrl(raw.productImage || raw.PRODUCT_IMAGE || raw.imageUrl),
       productImage: raw.productImage || raw.PRODUCT_IMAGE || null,
+      galleryImages: galleryImages,
       isFeatured: Boolean(raw.IS_FEATURED ?? raw.isFeatured),
       isActive: isAct,
       inStock: stockNum > 0 && isAct,
@@ -237,13 +262,6 @@ export class AdminProductService {
     );
   }
 
-  getProductById(id: string): Observable<Product | undefined> {
-    return this.productsSubject.asObservable().pipe(
-      delay(150),
-      map(products => products.find(p => p.id === id))
-    );
-  }
-
   /**
    * ADMIN API: /api/admin/updateStock
    * Updates product stock by quantity or delta via PROC_EB_ADMIN_UPDATE_STOCK
@@ -314,6 +332,28 @@ export class AdminProductService {
   }
 
   /**
+   * ADMIN API: /api/admin/uploadProductImages
+   * Uploads local product images (1 main image and/or multiple gallery images)
+   */
+  uploadProductImages(formData: FormData): Observable<{ success: boolean; mainImageUrl?: string | null; galleryImageUrls?: string[] }> {
+    return this.http.post<{ success: boolean; mainImageUrl?: string | null; galleryImageUrls?: string[] }>(
+      `${this.apiUrl}/api/admin/uploadProductImages`,
+      formData
+    );
+  }
+
+  /**
+   * ADMIN API: /api/admin/getProductById
+   * Retrieves single product details and gallery images
+   */
+  getProductById(id: number | string): Observable<{ success: boolean; data: any }> {
+    return this.http.post<{ success: boolean; data: any }>(
+      `${this.apiUrl}/api/admin/getProductById`,
+      { id: Number(id) }
+    );
+  }
+
+  /**
    * ADMIN API: /api/admin/addProduct
    * Adds a product to the SQL Server database via PROC_EB_ADMIN_ADD_PRODUCT
    */
@@ -328,6 +368,7 @@ export class AdminProductService {
       sellingPrice: product.sellingPrice != null ? Number(product.sellingPrice) : (product.price != null ? Number(product.price) : null),
       stock: product.stock != null ? Number(product.stock) : 0,
       productImage: product.productImage ?? product.imageUrl ?? null,
+      galleryImages: product.galleryImages || [],
       isFeatured: product.isFeatured ? 1 : 0,
       code: product.code || null,
       offerType: product.offerType || null,
@@ -370,6 +411,7 @@ export class AdminProductService {
       unit: updates.unit || null,
       stock: updates.stock != null ? Number(updates.stock) : null,
       productImage: updates.productImage ?? updates.imageUrl ?? null,
+      galleryImages: updates.galleryImages !== undefined ? updates.galleryImages : undefined,
       isFeatured: updates.isFeatured !== undefined ? (updates.isFeatured ? 1 : 0) : null,
       isActive: updates.isActive !== undefined ? (updates.isActive ? 1 : 0) : (updates.inStock !== undefined ? (updates.inStock ? 1 : 0) : null),
       offerType: updates.offerType !== undefined ? (updates.offerType || null) : null,

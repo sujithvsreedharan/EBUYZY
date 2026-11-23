@@ -19,17 +19,45 @@ export class OrderSuccess implements OnInit {
   private readonly settingsService = inject(SettingsService);
 
   readonly order = signal<Order | null>(null);
+  readonly orderRef = signal<string>('');
+  readonly isLoading = signal<boolean>(true);
   readonly settings = toSignal(this.settingsService.getSettings());
 
   ngOnInit(): void {
     const orderId = this.route.snapshot.paramMap.get('id');
     if (orderId) {
+      this.orderRef.set(orderId);
       this.orderService.getOrderById(orderId).subscribe((o) => {
         if (o) {
           this.order.set(o);
+          this.isLoading.set(false);
+        } else {
+          this.fetchFromBackend(orderId);
         }
       });
+    } else {
+      this.isLoading.set(false);
     }
+  }
+
+  private fetchFromBackend(orderId: string): void {
+    this.orderService.getOrderDetailsApi(orderId).subscribe({
+      next: (res) => {
+        this.isLoading.set(false);
+        if (res.success && res.order) {
+          const mapped = this.orderService.mapBackendAdminOrder({
+            ...res.order,
+            items: res.items || []
+          });
+          this.order.set(mapped);
+          this.orderService.addPlacedOrder(mapped);
+        }
+      },
+      error: (err) => {
+        this.isLoading.set(false);
+        console.warn('Could not load order details from backend:', err);
+      }
+    });
   }
 
   getWhatsAppStoreUrl(order: Order): string {

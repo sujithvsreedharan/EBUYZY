@@ -8,6 +8,7 @@ export const USER_ROUTES: Routes = [
     children: [
       {
         path: '',
+        pathMatch: 'full',
         loadComponent: () =>
           import('../home/home').then((m) => m.Home)
       },
@@ -33,7 +34,8 @@ export const USER_ROUTES: Routes = [
       },
       {
         path: 'orders',
-        redirectTo: 'profile'
+        loadComponent: () =>
+          import('../profile/profile').then((m) => m.Profile)
       }
     ]
   }

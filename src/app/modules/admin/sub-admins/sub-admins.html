@@ -324,7 +324,7 @@
                 <label for="subPhone" class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
                   Mobile Number (10 digits) <span class="text-rose-600">*</span>
                 </label>
-                <input id="subPhone" type="tel" formControlName="phone" placeholder="9847000222" maxlength="10"
+                <input id="subPhone" type="tel" formControlName="phone" placeholder="Enter 10-digit mobile" maxlength="10"
                   class="w-full px-3.5 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-xs font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]" />
                 @if (subAdminForm.get('phone')?.invalid && subAdminForm.get('phone')?.touched) {
                 <p class="text-[11px] text-rose-600 mt-1">Please enter a 10-digit Indian mobile number</p>
@@ -336,7 +336,7 @@
                 <label for="subPass" class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
                   Portal Login Password <span class="text-rose-600">*</span>
                 </label>
-                <input id="subPass" type="text" formControlName="password" placeholder="order123"
+                <input id="subPass" type="text" formControlName="password" placeholder="Create login password"
                   class="w-full px-3.5 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-xs font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]" />
                 <p class="text-[11px] text-gray-400 dark:text-gray-500 mt-1">Min 4 characters. The sub-admin uses this password to sign in at /admin/login.</p>
               </div>

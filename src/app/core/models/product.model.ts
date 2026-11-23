@@ -16,6 +16,7 @@ export interface Product {
   stock: number;
   imageUrl: string;
   productImage?: string | null;
+  galleryImages?: string[];
   isFeatured?: boolean;
   isActive?: boolean;
   inStock: boolean;
@@ -38,6 +39,7 @@ export interface AddProductPayload {
   sellingPrice?: number | null;
   stock?: number;
   productImage?: string | null;
+  galleryImages?: string[];
   isFeatured?: boolean | number;
   code?: string | null;
   offerType?: 'PERCENT' | 'AMOUNT' | string | null;
@@ -58,6 +60,7 @@ export interface UpdateProductPayload {
   sellingPrice?: number | null;
   stock?: number | null;
   productImage?: string | null;
+  galleryImages?: string[];
   isFeatured?: boolean | number | null;
   isActive?: boolean | number | null;
   offerType?: 'PERCENT' | 'AMOUNT' | string | null;

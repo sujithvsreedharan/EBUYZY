@@ -1,9 +1,11 @@
 export type OrderStatus =
   | 'New'
-  | 'Confirmed'
+  | 'Packing'
+  | 'Packed'
   | 'Out for delivery'
   | 'Delivered'
-  | 'Cancelled';
+  | 'Cancelled'
+  | 'Confirmed';
 
 export interface OrderItem {
   productId: string;

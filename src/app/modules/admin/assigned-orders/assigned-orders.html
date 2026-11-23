@@ -247,7 +247,7 @@
 
       <!-- Action Status Buttons for Delivery Person -->
       <div class="pt-2">
-        @if (order.status === 'Confirmed' || order.status === 'New') {
+        @if (order.status === 'Packed' || order.status === 'Packing' || order.status === 'Confirmed' || order.status === 'New') {
         <button type="button" (click)="markOutForDelivery(order)"
           class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#FF9500] to-[#FF4D00] hover:from-[#e08500] hover:to-[#e04000] text-white font-bold text-sm flex items-center justify-center gap-2 shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]">
           <span>🛵</span>

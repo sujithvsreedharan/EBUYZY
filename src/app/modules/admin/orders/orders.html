@@ -1,19 +1,4 @@
 <div class="space-y-6">
-  <!-- Assignment Toast Notice -->
-  @if (assignmentNotice()) {
-  <div role="alert"
-    class="p-4 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs sm:text-sm font-bold flex items-center justify-between shadow-xs animate-in fade-in">
-    <div class="flex items-center gap-2">
-      <span class="text-base">🛵</span>
-      <span>{{ assignmentNotice() }}</span>
-    </div>
-    <button type="button" (click)="assignmentNotice.set(null)"
-      class="p-1 text-emerald-700 hover:text-emerald-900 rounded text-xs font-bold">
-      ✕ Dismiss
-    </button>
-  </div>
-  }
-
   <!-- Page Header -->
   <div
     class="bg-white border border-gray-200 rounded-xl p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -23,9 +8,16 @@
         <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">
           {{ filteredOrders().length }} orders
         </span>
+        <button type="button" (click)="refreshOrders()" title="Refresh live orders"
+          class="p-1 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        </button>
       </div>
       <p class="text-sm text-gray-500">
-        Manage Kerala customer orders, dispatch status, WhatsApp notifications, and geolocation delivery links.
+        Manage customer orders, update dispatch status, and track live deliveries.
       </p>
     </div>
 
@@ -36,11 +28,19 @@
         {{ countByStatus('New') }} New
       </div>
       <div
-        class="px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-800 text-xs font-semibold shrink-0">
-        {{ countByStatus('Confirmed') + countByStatus('Out for delivery') }} In progress
+        class="px-3 py-1.5 rounded-lg border border-orange-200 bg-orange-50 text-orange-800 text-xs font-semibold shrink-0">
+        {{ countByStatus('Packing') }} Packing
       </div>
       <div
-        class="px-3 py-1.5 rounded-lg border border-[#FFD600]/60 bg-[#FFD600]/20 text-black text-xs font-semibold shrink-0">
+        class="px-3 py-1.5 rounded-lg border border-purple-200 bg-purple-50 text-purple-800 text-xs font-semibold shrink-0">
+        {{ countByStatus('Packed') }} Packed
+      </div>
+      <div
+        class="px-3 py-1.5 rounded-lg border border-sky-200 bg-sky-50 text-sky-800 text-xs font-semibold shrink-0">
+        {{ countByStatus('Out for delivery') }} Out for delivery
+      </div>
+      <div
+        class="px-3 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-800 text-xs font-semibold shrink-0">
         {{ countByStatus('Delivered') }} Delivered
       </div>
     </div>
@@ -58,7 +58,7 @@
         </svg>
       </div>
       <input type="text" [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)"
-        placeholder="Search by order ID (e.g. EZ-2026-0801) or customer phone..."
+        placeholder="Search by order ID or customer phone..."
         aria-label="Search orders by ID or phone"
         class="w-full pl-10 pr-9 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 text-sm placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500] focus-visible:border-transparent transition-colors" />
       @if (searchQuery()) {
@@ -95,19 +95,24 @@
       <table class="w-full text-left text-sm" aria-label="Customer orders table">
         <thead class="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600 uppercase tracking-wider">
           <tr>
+            <th scope="col" class="py-3.5 px-3 sm:px-4 text-center w-12 font-bold">Sl.No</th>
             <th scope="col" class="py-3.5 px-4 sm:px-6">Order ID & Date</th>
             <th scope="col" class="py-3.5 px-4">Customer</th>
             <th scope="col" class="py-3.5 px-4">Items</th>
             <th scope="col" class="py-3.5 px-4">Total</th>
             <th scope="col" class="py-3.5 px-4">Status</th>
-            <th scope="col" class="py-3.5 px-4">Delivery Partner</th>
             <th scope="col" class="py-3.5 px-4 sm:px-6 text-right">Action</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100">
-          @for (order of filteredOrders(); track order.id) {
+          @for (order of filteredOrders(); track order.id; let i = $index) {
           <tr class="hover:bg-gray-50/80 transition-colors cursor-pointer"
             [ngClass]="{ 'bg-[#FFD600]/15': selectedOrder()?.id === order.id }" (click)="openOrderDetail(order)">
+            <!-- Serial Number -->
+            <td class="py-4 px-3 sm:px-4 text-center font-bold text-gray-500 text-xs">
+              {{ i + 1 }}
+            </td>
+
             <!-- Order ID & Date -->
             <td class="py-4 px-4 sm:px-6">
               <span class="font-mono font-bold text-gray-900 text-xs sm:text-sm block">
@@ -154,29 +159,51 @@
               <app-status-badge [status]="order.status" />
             </td>
 
-            <!-- Delivery Partner -->
-            <td class="py-4 px-4">
-              @if (order.assignedDeliveryPersonName) {
-              <div class="flex items-center gap-1.5">
-                <span
-                  class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                  <span>🛵</span>
-                  <span>{{ order.assignedDeliveryPersonName }}</span>
-                </span>
-              </div>
-              } @else {
-              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium text-gray-400 bg-gray-50 border border-dashed border-gray-300">
-                Unassigned
-              </span>
-              }
-            </td>
-
             <!-- Action Button -->
             <td class="py-4 px-4 sm:px-6 text-right" (click)="$event.stopPropagation()">
-              <button type="button" (click)="openOrderDetail(order)"
-                class="px-3 py-1.5 rounded-lg border border-gray-300 hover:border-[#FF9500] text-xs font-bold text-gray-700 hover:text-[#FF9500] hover:bg-orange-50/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]">
-                View details
-              </button>
+              <div class="flex items-center justify-end gap-2 flex-wrap sm:flex-nowrap">
+                @switch (order.status) {
+                  @case ('New') {
+                    <button type="button" (click)="updateStatus(order, 'Confirmed')"
+                      class="px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-[#FF9500] to-[#FF4D00] hover:from-[#e08500] hover:to-[#e04000] text-white text-xs font-bold shadow-xs transition-colors shrink-0"
+                      title="Confirm order">
+                      Confirm
+                    </button>
+                  }
+                  @case ('Confirmed') {
+                    <button type="button" (click)="updateStatus(order, 'Packing')"
+                      class="px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-[#FF9500] to-[#FF4D00] hover:from-[#e08500] hover:to-[#e04000] text-white text-xs font-bold shadow-xs transition-colors shrink-0"
+                      title="Start packing items">
+                      Pack
+                    </button>
+                  }
+                  @case ('Packing') {
+                    <button type="button" (click)="updateStatus(order, 'Out for delivery')"
+                      class="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition-colors shrink-0"
+                      title="Dispatch order &bull; Out for delivery">
+                      Dispatch
+                    </button>
+                  }
+                  @case ('Packed') {
+                    <button type="button" (click)="updateStatus(order, 'Out for delivery')"
+                      class="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition-colors shrink-0"
+                      title="Dispatch order &bull; Out for delivery">
+                      Dispatch
+                    </button>
+                  }
+                  @case ('Out for delivery') {
+                    <button type="button" (click)="updateStatus(order, 'Delivered')"
+                      class="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition-colors shrink-0"
+                      title="Complete and mark as Delivered">
+                      Deliver
+                    </button>
+                  }
+                }
+                <button type="button" (click)="openOrderDetail(order)"
+                  class="px-3 py-1.5 rounded-lg border border-gray-300 hover:border-[#FF9500] text-xs font-bold text-gray-700 hover:text-[#FF9500] hover:bg-orange-50/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500] shrink-0">
+                  View details
+                </button>
+              </div>
             </td>
           </tr>
           } @empty {
@@ -286,77 +313,6 @@
           </div>
         </div>
 
-        <!-- ================= DELIVERY PARTNER ASSIGNMENT CARD ================= -->
-        <div class="border border-emerald-200 rounded-xl p-4 sm:p-5 bg-emerald-50/40 space-y-3">
-          <div class="flex items-center justify-between">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-900 flex items-center gap-1.5">
-              <span>🛵</span>
-              <span>Delivery Partner Assignment</span>
-            </h3>
-            @if (currentOrder.assignedDeliveryPersonName) {
-            <button type="button" (click)="unassignDeliveryPartner(currentOrder)"
-              class="text-[11px] font-bold text-rose-600 hover:underline">
-              ✕ Unassign
-            </button>
-            }
-          </div>
-
-          @if (currentOrder.assignedDeliveryPersonName) {
-          <!-- Assigned Rider Summary Box -->
-          <div class="bg-white p-3.5 rounded-lg border border-emerald-200 flex items-center justify-between gap-3">
-            <div>
-              <div class="font-bold text-sm text-gray-900 flex items-center gap-2">
-                <span>{{ currentOrder.assignedDeliveryPersonName }}</span>
-                <span class="px-2 py-0.2 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                  Assigned
-                </span>
-              </div>
-              <div class="text-xs text-gray-500 font-mono mt-0.5">
-                +91 {{ currentOrder.assignedDeliveryPersonPhone || 'Rider Contact' }}
-              </div>
-              @if (currentOrder.assignedVehicle) {
-              <div class="text-[11px] text-gray-600 mt-0.5">
-                🛵 {{ currentOrder.assignedVehicle }}
-              </div>
-              }
-            </div>
-
-            @if (currentOrder.assignedDeliveryPersonPhone) {
-            <a [href]="'tel:+91' + currentOrder.assignedDeliveryPersonPhone"
-              class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors shrink-0">
-              📞 Call Rider
-            </a>
-            }
-          </div>
-          } @else {
-          <div class="p-3 bg-amber-50 rounded-lg border border-amber-200 text-xs text-amber-900">
-            ⚠️ No delivery person assigned yet. Assign a rider below to begin dispatch.
-          </div>
-          }
-
-          <!-- Assign / Reassign Selector -->
-          <div class="pt-1">
-            <label for="assign-rider-select" class="block text-xs font-semibold text-gray-700 mb-1.5">
-              {{ currentOrder.assignedDeliveryPersonName ? 'Change Delivery Partner:' : 'Assign to Delivery Partner:' }}
-            </label>
-            <div class="flex gap-2">
-              <select id="assign-rider-select" #riderSelect
-                class="flex-1 px-3 py-2 rounded-lg border border-gray-300 bg-white text-xs font-bold text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]">
-                <option value="">-- Select Active Delivery Partner --</option>
-                @for (rider of staffService.activeDeliveryPersons(); track rider.id) {
-                <option [value]="rider.id" [selected]="rider.id === currentOrder.assignedDeliveryPersonId">
-                  {{ rider.name }} &bull; {{ rider.vehicleNumber || rider.vehicleType || 'Bike' }} ({{ rider.zone || 'Kakkanad' }})
-                </option>
-                }
-              </select>
-              <button type="button" (click)="assignDeliveryPartner(currentOrder, riderSelect.value)"
-                class="px-3.5 py-2 rounded-lg bg-black text-[#FFD600] text-xs font-black hover:bg-gray-800 transition-colors shrink-0">
-                Assign
-              </button>
-            </div>
-          </div>
-        </div>
-
         <!-- Order Items List -->
         <div class="space-y-3">
           <h3 class="text-xs font-bold uppercase tracking-wider text-gray-600">Ordered items</h3>
@@ -423,17 +379,21 @@
               1. New
             </div>
             <div class="text-gray-300">&rarr;</div>
-            <div class="flex-1 text-center py-1 rounded" [ngClass]="getStepClass(currentOrder.status, 'Confirmed')">
-              2. Confirmed
+            <div class="flex-1 text-center py-1 rounded" [ngClass]="getStepClass(currentOrder.status, 'Packing')">
+              2. Packing
+            </div>
+            <div class="text-gray-300">&rarr;</div>
+            <div class="flex-1 text-center py-1 rounded" [ngClass]="getStepClass(currentOrder.status, 'Packed')">
+              3. Packed
             </div>
             <div class="text-gray-300">&rarr;</div>
             <div class="flex-1 text-center py-1 rounded"
               [ngClass]="getStepClass(currentOrder.status, 'Out for delivery')">
-              3. Out
+              4. Out for delivery
             </div>
             <div class="text-gray-300">&rarr;</div>
             <div class="flex-1 text-center py-1 rounded" [ngClass]="getStepClass(currentOrder.status, 'Delivered')">
-              4. Delivered
+              5. Delivered
             </div>
           </div>
 
@@ -443,25 +403,37 @@
             @case ('New') {
             <button type="button" (click)="updateStatus(currentOrder, 'Confirmed')"
               class="w-full py-2.5 px-4 rounded-lg bg-gradient-to-r from-[#FF9500] to-[#FF4D00] hover:from-[#e08500] hover:to-[#e04000] text-white font-bold text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]">
-              Confirm order &bull; Prepare items
+              Confirm Order ✅
             </button>
             }
             @case ('Confirmed') {
+            <button type="button" (click)="updateStatus(currentOrder, 'Packing')"
+              class="w-full py-2.5 px-4 rounded-lg bg-gradient-to-r from-[#FF9500] to-[#FF4D00] hover:from-[#e08500] hover:to-[#e04000] text-white font-bold text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]">
+              Start Packing 📦
+            </button>
+            }
+            @case ('Packing') {
             <button type="button" (click)="updateStatus(currentOrder, 'Out for delivery')"
-              class="w-full py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600">
-              Dispatch order &bull; Out for delivery
+              class="w-full py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600">
+              Dispatch Order &bull; Out for Delivery 🛵
+            </button>
+            }
+            @case ('Packed') {
+            <button type="button" (click)="updateStatus(currentOrder, 'Out for delivery')"
+              class="w-full py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600">
+              Dispatch Order &bull; Out for Delivery 🛵
             </button>
             }
             @case ('Out for delivery') {
             <button type="button" (click)="updateStatus(currentOrder, 'Delivered')"
-              class="w-full py-2.5 px-4 rounded-lg bg-gradient-to-r from-[#FF9500] to-[#FF4D00] hover:from-[#e08500] hover:to-[#e04000] text-white font-bold text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]">
-              Complete order &bull; Mark as delivered
+              class="w-full py-2.5 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600">
+              Complete Order &bull; Mark as Delivered 🏡
             </button>
             }
             @case ('Delivered') {
             <div
-              class="p-3 bg-[#FFD600]/20 border border-[#FFD600]/60 rounded-lg text-black text-xs font-bold text-center flex items-center justify-center gap-1.5">
-              <svg class="w-4 h-4 text-[#FF9500]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              class="p-3 bg-emerald-50 border border-emerald-300 rounded-lg text-emerald-900 text-xs font-bold text-center flex items-center justify-center gap-1.5">
+              <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
               </svg>
               <span>This order was completed and delivered to customer</span>

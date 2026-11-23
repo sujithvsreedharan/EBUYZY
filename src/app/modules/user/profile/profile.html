@@ -20,8 +20,7 @@
         Sign In to Access Your Account
       </h1>
       <p class="text-sm text-gray-600 dark:text-gray-300 max-w-md mx-auto leading-relaxed">
-        Log in with your phone or email to track active 30-45 minute Kakkanad deliveries, re-order fresh Kerala
-        groceries, and view itemized bills.
+        Log in with your phone or email to view your orders, live track deliveries, and manage your delivery addresses.
       </p>
     </div>
 
@@ -34,16 +33,6 @@
         class="w-full sm:w-auto px-6 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 text-sm font-bold transition-colors">
         Browse Fresh Produce
       </a>
-    </div>
-
-    <!-- Quick Demo Account Hint -->
-    <div
-      class="pt-4 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-500 dark:text-gray-400 flex items-center justify-center gap-2">
-      <span>⚡ Quick test login:</span>
-      <button type="button" (click)="openSignInModal()"
-        class="font-bold text-[#FF9500] dark:text-[#FFD600] hover:underline">
-        Demo Customer (9847123450 / user123)
-      </button>
     </div>
   </div>
   } @else {
@@ -66,26 +55,32 @@
             </h1>
             <span
               class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#FFD600]/20 dark:bg-[#FFD600]/10 text-black dark:text-[#FFD600] border border-[#FFD600]/40 uppercase tracking-wider">
-              Kerala Customer
+              {{ authService.currentUser()?.role || 'Customer' }}
             </span>
           </div>
 
           <!-- Contact Specs -->
           <div class="flex items-center gap-4 text-xs text-gray-600 dark:text-gray-400 mt-1.5 flex-wrap">
+            @if (authService.currentUser()?.phone) {
             <span class="flex items-center gap-1">
               <span>📱</span>
-              <span>+91 {{ authService.currentUser()?.phone || '9847123450' }}</span>
+              <span>+91 {{ authService.currentUser()?.phone }}</span>
             </span>
+            }
+            @if (authService.currentUser()?.email) {
             <span class="text-gray-300 dark:text-gray-700">&bull;</span>
             <span class="flex items-center gap-1">
               <span>✉️</span>
-              <span>{{ authService.currentUser()?.email || 'customer@ebuyzy.in' }}</span>
+              <span>{{ authService.currentUser()?.email }}</span>
             </span>
+            }
+            @if (authService.currentUser()?.locality) {
             <span class="text-gray-300 dark:text-gray-700 hidden sm:inline">&bull;</span>
             <span class="hidden sm:inline-flex items-center gap-1 text-[#FF9500] dark:text-[#FFD600] font-semibold">
               <span>📍</span>
-              <span>Kakkanad 3-5 km Express Zone</span>
+              <span>{{ authService.currentUser()?.locality }}</span>
             </span>
+            }
           </div>
         </div>
       </div>
@@ -126,6 +121,18 @@
       </div>
       <button type="button" (click)="profileSuccessMsg.set(null)"
         class="text-black dark:text-white hover:underline">&times;</button>
+    </div>
+    }
+
+    @if (profileErrorMsg()) {
+    <div
+      class="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-bold flex items-center justify-between gap-3 animate-fadeIn">
+      <div class="flex items-center gap-2">
+        <span>⚠️</span>
+        <span>{{ profileErrorMsg() }}</span>
+      </div>
+      <button type="button" (click)="profileErrorMsg.set(null)"
+        class="text-rose-700 dark:text-rose-300 hover:underline">&times;</button>
     </div>
     }
 
@@ -217,6 +224,12 @@
 
       <!-- Orders List -->
       <div class="space-y-4">
+        @if (isLoadingOrders()) {
+        <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-12 text-center flex flex-col items-center justify-center gap-3">
+          <div class="w-8 h-8 border-3 border-[#FF9500] border-t-transparent rounded-full animate-spin"></div>
+          <p class="text-xs font-semibold text-gray-600 dark:text-gray-300">Fetching your orders from EBUYZY...</p>
+        </div>
+        } @else {
         @for (order of filteredOrders(); track order.id) {
         <div
           class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden transition-all shadow-2xs hover:border-gray-300 dark:hover:border-gray-700">
@@ -235,14 +248,14 @@
                 @if (order.status === 'Out for delivery') {
                 <span
                   class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-purple-600 text-white flex items-center gap-1 shadow-xs">
-                  <span>⚡</span>
-                  <span>Arriving in 15-20 mins</span>
+                  <span>🛵</span>
+                  <span>Out for Delivery</span>
                 </span>
                 }
               </div>
               <p class="text-xs text-gray-500 dark:text-gray-400">
                 Placed on {{ formatDate(order.createdAt) }} &bull; {{ order.items.length }} {{ order.items.length === 1
-                ? 'produce item' : 'produce items' }}
+                ? 'item' : 'items' }}
               </p>
             </div>
 
@@ -292,10 +305,9 @@
                     ✓
                   </div>
                   <span class="text-[11px] font-bold mt-1 text-gray-900 dark:text-white">Placed</span>
-                  <span class="text-[9px] text-gray-500 hidden sm:block">Confirmed</span>
                 </div>
 
-                <!-- Step 2: Packed at Kakkanad -->
+                <!-- Step 2: Packed -->
                 <div class="flex flex-col items-center text-center">
                   <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors"
                     [ngClass]="
@@ -309,7 +321,6 @@
                     [ngClass]="getDeliveryStepIndex(order.status) >= 2 ? 'text-gray-900 dark:text-white' : 'text-gray-400'">
                     Packed
                   </span>
-                  <span class="text-[9px] text-gray-500 hidden sm:block">Kakkanad Hub</span>
                 </div>
 
                 <!-- Step 3: Out for Delivery -->
@@ -326,7 +337,6 @@
                     [ngClass]="getDeliveryStepIndex(order.status) >= 3 ? 'text-purple-600 dark:text-purple-400 font-extrabold' : 'text-gray-400'">
                     On the Way
                   </span>
-                  <span class="text-[9px] text-gray-500 hidden sm:block">Express Pilot</span>
                 </div>
 
                 <!-- Step 4: Delivered -->
@@ -343,7 +353,6 @@
                     [ngClass]="getDeliveryStepIndex(order.status) >= 4 ? 'text-[#FF9500] dark:text-[#FFD600]' : 'text-gray-400'">
                     Delivered
                   </span>
-                  <span class="text-[9px] text-gray-500 hidden sm:block">Doorstep</span>
                 </div>
               </div>
             </div>
@@ -380,6 +389,15 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
+
+              <!-- Cancel Order Button (Only allowed if order is 'New' / PENDING) -->
+              @if (order.status === 'New') {
+              <button type="button" (click)="cancelCustomerOrder(order)"
+                class="px-3 py-1.5 rounded-lg border border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-rose-700 dark:text-rose-300 text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                title="Cancel this order before confirmation">
+                <span>&times; Cancel Order</span>
+              </button>
+              }
 
               <!-- Re-Order Button (One click adds items to cart) -->
               <button type="button" (click)="reorderItems(order)"
@@ -440,7 +458,7 @@
                 <span>₹{{ order.subtotal }}</span>
               </div>
               <div class="flex justify-between text-gray-600 dark:text-gray-400">
-                <span>Kakkanad Express Delivery Fee:</span>
+                <span>Delivery Fee:</span>
                 <span>₹{{ order.deliveryFee }}</span>
               </div>
               <div
@@ -465,23 +483,17 @@
               No Orders Found
             </h3>
             <p class="text-xs text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
-              You haven't placed any orders yet matching this criteria. Fresh Kerala produce is ready to be delivered to
-              Kakkanad in 30-45 minutes.
+              You haven't placed any orders yet matching this criteria.
             </p>
           </div>
           <div class="flex items-center justify-center gap-3 pt-2">
             <a routerLink="/products"
               class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#FF9500] to-[#FF4D00] hover:from-[#e08500] hover:to-[#e04000] text-white text-xs font-bold transition-colors shadow-xs">
-              Explore Produce Catalog
+              Explore Products
             </a>
-            @if (!showDemoOrders()) {
-            <button type="button" (click)="showDemoOrders.set(true)"
-              class="px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-xs font-bold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-              Preview Sample Deliveries
-            </button>
-            }
           </div>
         </div>
+        }
         }
       </div>
     </div>
@@ -521,13 +533,14 @@
 
           <div class="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700/60">
             <span class="text-gray-400 dark:text-gray-500 block text-[10px] uppercase font-bold">Mobile Phone</span>
-            <span class="text-sm font-bold text-gray-900 dark:text-white font-mono">+91 {{
-              authService.currentUser()?.phone || '9847123450' }}</span>
+            <span class="text-sm font-bold text-gray-900 dark:text-white font-mono">
+              {{ authService.currentUser()?.phone ? '+91 ' + authService.currentUser()?.phone : 'Not set' }}
+            </span>
           </div>
 
           <div class="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700/60">
             <span class="text-gray-400 dark:text-gray-500 block text-[10px] uppercase font-bold">Email Address</span>
-            <span class="text-sm font-bold text-gray-900 dark:text-white">{{ authService.currentUser()?.email }}</span>
+            <span class="text-sm font-bold text-gray-900 dark:text-white">{{ authService.currentUser()?.email || 'Not set' }}</span>
           </div>
         </div>
         } @else {
@@ -582,7 +595,7 @@
         <div class="flex items-center justify-between">
           <div>
             <h3 class="text-base font-bold text-gray-900 dark:text-white">Default Delivery Address</h3>
-            <p class="text-xs text-gray-500 dark:text-gray-400">Used for sub-45 min Kakkanad deliveries</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Used for delivery orders</p>
           </div>
 
           @if (!isEditingAddress()) {
@@ -604,22 +617,39 @@
           <div class="flex items-center justify-between">
             <span class="font-bold text-[#FF9500] dark:text-[#FFD600] flex items-center gap-1.5">
               <span>📍</span>
-              <span>Primary Kakkanad Residence</span>
+              <span>{{ authService.currentUser()?.locality || 'Primary Delivery Address' }}</span>
             </span>
+            @if (authService.currentUser()?.address) {
             <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-gradient-to-r from-[#FF9500] to-[#FF4D00] text-white">Default</span>
+            }
           </div>
 
           <p class="text-gray-800 dark:text-gray-200 leading-relaxed font-medium">
-            {{ authService.currentUser()?.address || 'Flat 4B, Olive Greens, Infopark Road, Kakkanad, Kochi, Kerala
-            682042' }}
+            {{ authService.currentUser()?.address || 'No default delivery address configured yet. Click Change above to set your delivery address.' }}
           </p>
+        </div>
 
-          <div
-            class="pt-2 border-t border-orange-100 dark:border-orange-900/40 flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-400">
-            <span>Coverage: <strong>3-5 km Express Hub</strong></span>
-            <span class="text-[#FF9500] dark:text-[#FFD600] font-bold">⚡ Free above ₹150</span>
+        @if (savedAddresses().length > 0) {
+        <div class="space-y-2.5 pt-2">
+          <h4 class="text-xs font-bold text-gray-700 dark:text-gray-300">All Saved Addresses ({{ savedAddresses().length }})</h4>
+          <div class="space-y-2">
+            @for (addr of savedAddresses(); track addr.id) {
+            <div class="p-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-800/40 text-xs flex items-start justify-between gap-3">
+              <div class="space-y-1">
+                <div class="flex items-center gap-2">
+                  <span class="font-bold text-gray-900 dark:text-white">{{ addr.label || 'Address' }}</span>
+                  @if (addr.isDefault) {
+                  <span class="px-1.5 py-0.2 rounded text-[10px] font-bold bg-[#FFD600]/20 text-black dark:text-[#FFD600] border border-[#FFD600]/40">Default</span>
+                  }
+                </div>
+                <p class="text-gray-600 dark:text-gray-400">{{ addr.main_address }}{{ addr.landmark ? ' (Near ' + addr.landmark + ')' : '' }}</p>
+                <p class="text-[11px] text-gray-500">{{ addr.city }}{{ addr.pin ? ' - ' + addr.pin : '' }} &bull; Contact: {{ addr.mobile || authService.currentUser()?.phone }}</p>
+              </div>
+            </div>
+            }
           </div>
         </div>
+        }
         } @else {
         <!-- Edit Address View -->
         <div class="space-y-3.5">
@@ -634,7 +664,7 @@
             <div>
               <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Locality</label>
               <input type="text" [ngModel]="localityInput()" (ngModelChange)="localityInput.set($event)"
-                placeholder="e.g. Infopark, Padamugal"
+                placeholder="Locality / Area"
                 class="w-full px-3 py-2 text-xs rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#FF9500]" />
             </div>
             <div>
@@ -694,53 +724,62 @@
 
       <!-- Modal Body -->
       <div class="p-5 space-y-5 text-xs">
-        <!-- Delivery ETA Banner -->
+        <!-- Delivery Status Banner -->
         <div
           class="p-4 rounded-xl bg-[#FFD600]/15 dark:bg-[#FFD600]/10 border border-[#FFD600]/40 flex items-center justify-between">
           <div class="space-y-0.5">
-            <span class="text-[10px] uppercase font-bold text-[#FF9500] dark:text-[#FFD600]">Estimated
-              Delivery</span>
+            <span class="text-[10px] uppercase font-bold text-[#FF9500] dark:text-[#FFD600]">Order Status</span>
             <p class="text-base font-black text-gray-900 dark:text-white">
-              {{ selectedOrderForTracking()?.status === 'Delivered' ? 'Delivered successfully' : 'Within 30-45 Minutes'
-              }}
+              {{ selectedOrderForTracking()?.status }}
             </p>
           </div>
-          <span class="text-3xl">⚡</span>
+          <span class="text-3xl">📦</span>
         </div>
 
-        <!-- Driver Info Card -->
+        <!-- Driver Info Card (when assigned) -->
+        @if (selectedOrderForTracking()?.assignedDeliveryPersonName) {
         <div class="p-4 rounded-xl border border-gray-200 dark:border-gray-800 flex items-center justify-between">
           <div class="flex items-center gap-3">
             <div
               class="w-10 h-10 rounded-full bg-gradient-to-r from-[#FF9500] to-[#FF4D00] text-white flex items-center justify-center font-bold text-sm">
-              MK
+              {{ selectedOrderForTracking()!.assignedDeliveryPersonName!.slice(0, 2).toUpperCase() }}
             </div>
             <div>
-              <span class="font-bold text-gray-900 dark:text-white block">Manoj K.</span>
-              <span class="text-[11px] text-gray-500 dark:text-gray-400">Kakkanad Express Delivery Pilot (EV
-                Scooter)</span>
+              <span class="font-bold text-gray-900 dark:text-white block">
+                {{ selectedOrderForTracking()?.assignedDeliveryPersonName }}
+              </span>
+              <span class="text-[11px] text-gray-500 dark:text-gray-400">
+                Assigned Delivery Partner
+              </span>
             </div>
           </div>
 
-          <a href="tel:+919847000111"
+          @if (selectedOrderForTracking()?.assignedDeliveryPersonPhone) {
+          <a [href]="'tel:+91' + selectedOrderForTracking()?.assignedDeliveryPersonPhone"
             class="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1">
             <span>📞 Call</span>
           </a>
+          }
         </div>
+        }
 
-        <!-- Route Spec -->
+        <!-- Delivery Details -->
         <div class="space-y-2">
-          <span class="font-bold text-gray-900 dark:text-white block">Dispatch Route:</span>
-          <div class="space-y-2 border-l-2 border-[#FF9500] ml-2 pl-3">
-            <div>
-              <span class="text-[10px] text-gray-400 font-bold block uppercase">Origin</span>
-              <span class="text-gray-700 dark:text-gray-300 font-medium">EBUYZY Kakkanad Central Hub, Infopark
-                Expressway</span>
+          <span class="font-bold text-gray-900 dark:text-white block">Delivery Details:</span>
+          <div class="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-800 space-y-1.5">
+            <div class="flex items-center justify-between text-[11px]">
+              <span class="text-gray-500 dark:text-gray-400">Recipient:</span>
+              <span class="font-bold text-gray-900 dark:text-white">{{ selectedOrderForTracking()?.customer?.name }}</span>
             </div>
-            <div>
-              <span class="text-[10px] text-[#FF9500] font-bold block uppercase">Destination</span>
-              <span class="text-gray-900 dark:text-white font-bold">{{ selectedOrderForTracking()?.customer?.address
-                }}</span>
+            @if (selectedOrderForTracking()?.customer?.phone) {
+            <div class="flex items-center justify-between text-[11px]">
+              <span class="text-gray-500 dark:text-gray-400">Phone:</span>
+              <span class="font-bold text-gray-900 dark:text-white font-mono">+91 {{ selectedOrderForTracking()?.customer?.phone }}</span>
+            </div>
+            }
+            <div class="pt-1 border-t border-gray-200 dark:border-gray-700/60 text-[11px]">
+              <span class="text-gray-500 dark:text-gray-400 block mb-0.5">Address:</span>
+              <span class="font-semibold text-gray-800 dark:text-gray-200">{{ selectedOrderForTracking()?.customer?.address }}</span>
             </div>
           </div>
         </div>
@@ -753,6 +792,106 @@
         <button type="button" (click)="closeTrackingModal()"
           class="px-4 py-2 rounded-lg bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-bold">
           Close Tracker
+        </button>
+      </div>
+    </div>
+  </div>
+  }
+
+  <!-- ================= CONFIRMATION POPUP MODAL FOR CANCELLING ORDER ================= -->
+  @if (orderToCancel(); as orderBeingCancelled) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn"
+    (click)="closeCancelModal()" role="dialog" aria-modal="true" aria-labelledby="cancel-modal-title">
+    <div
+      class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl space-y-0 transition-colors animate-in fade-in zoom-in-95 duration-200"
+      (click)="$event.stopPropagation()">
+      <!-- Modal Header -->
+      <div
+        class="p-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-rose-50/70 dark:bg-rose-950/30">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-rose-100 dark:bg-rose-900/50 text-rose-600 dark:text-rose-400 flex items-center justify-center text-lg font-bold">
+            ⚠️
+          </div>
+          <div>
+            <h3 id="cancel-modal-title" class="text-base font-extrabold text-gray-900 dark:text-white">
+              Cancel Order
+            </h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400 font-mono mt-0.5">
+              #{{ orderBeingCancelled.orderNumber }}
+            </p>
+          </div>
+        </div>
+
+        <button type="button" (click)="closeCancelModal()" [disabled]="isCancellingOrder()"
+          class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 text-lg rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+          aria-label="Close modal">
+          &times;
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-5 space-y-4 text-xs">
+        <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+          Are you sure you want to cancel order <strong class="font-mono text-gray-900 dark:text-white">#{{ orderBeingCancelled.orderNumber }}</strong>?
+        </p>
+
+        <!-- Order Summary snippet -->
+        <div class="p-3.5 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 space-y-2">
+          <div class="flex justify-between items-center text-xs">
+            <span class="text-gray-500 dark:text-gray-400">Total Amount:</span>
+            <span class="font-extrabold text-gray-900 dark:text-white">₹{{ orderBeingCancelled.total }}</span>
+          </div>
+          <div class="flex justify-between items-center text-xs">
+            <span class="text-gray-500 dark:text-gray-400">Items:</span>
+            <span class="font-semibold text-gray-800 dark:text-gray-200">{{ orderBeingCancelled.items.length }} {{ orderBeingCancelled.items.length === 1 ? 'item' : 'items' }}</span>
+          </div>
+          <div class="flex justify-between items-center text-xs">
+            <span class="text-gray-500 dark:text-gray-400">Delivery Address:</span>
+            <span class="font-medium text-gray-800 dark:text-gray-200 truncate max-w-[200px]" [title]="orderBeingCancelled.customer.address">{{ orderBeingCancelled.customer.address }}</span>
+          </div>
+        </div>
+
+        <!-- Reason Selector -->
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+            Reason for cancellation (optional):
+          </label>
+          <select [ngModel]="cancelReason()" (ngModelChange)="cancelReason.set($event)" [disabled]="isCancellingOrder()"
+            class="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]">
+            <option value="Changed mind / placed by mistake">Changed mind / placed by mistake</option>
+            <option value="Ordered duplicate items">Ordered duplicate items</option>
+            <option value="Need to change delivery address">Need to change delivery address</option>
+            <option value="Want to add more items to order">Want to add more items to order</option>
+            <option value="Delivery time does not suit">Delivery time does not suit</option>
+            <option value="Other reason">Other reason</option>
+          </select>
+        </div>
+
+        <p class="text-[11px] text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 p-2.5 rounded-lg border border-amber-200 dark:border-amber-800/60 leading-relaxed">
+          ℹ️ Once cancelled, this order cannot be undone. You can re-order anytime from your order history.
+        </p>
+      </div>
+
+      <!-- Modal Footer Action Buttons -->
+      <div class="p-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-800/40 flex items-center justify-end gap-2.5">
+        <button type="button" (click)="closeCancelModal()" [disabled]="isCancellingOrder()"
+          class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 text-xs font-bold transition-colors cursor-pointer">
+          Keep Order
+        </button>
+
+        <button type="button" (click)="confirmCancelOrder()" [disabled]="isCancellingOrder()"
+          class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer">
+          @if (isCancellingOrder()) {
+          <svg class="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+            </path>
+          </svg>
+          <span>Cancelling...</span>
+          } @else {
+          <span>Yes, Cancel Order</span>
+          }
         </button>
       </div>
     </div>

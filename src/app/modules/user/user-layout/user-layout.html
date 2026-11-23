@@ -64,13 +64,11 @@
             class="px-3 py-1.5 rounded-lg text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center gap-1.5">
             <span>Category</span>
           </a>
-          @if (authService.isAuthenticated()) {
           <a routerLink="/profile"
             routerLinkActive="bg-[#FFD600]/15 text-[#000000] dark:text-[#FFD600] border border-[#FFD600]/40"
-            class="px-3 py-1.5 rounded-lg text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center gap-1.5">
+            class="px-3 py-1.5 rounded-lg text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center gap-1.5 cursor-pointer">
             <span>My Orders &amp; Profile</span>
           </a>
-          }
         </nav>
       </div>
 
@@ -174,7 +172,7 @@
           <div
             class="flex items-center gap-1.5 sm:gap-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-2 sm:px-2.5 py-1.5">
             <a routerLink="/profile"
-              class="flex items-center gap-1.5 sm:gap-2 hover:opacity-80 transition-opacity focus-visible:outline-none"
+              class="flex items-center gap-1.5 sm:gap-2 hover:opacity-80 transition-opacity focus-visible:outline-none cursor-pointer"
               title="View your orders and profile details">
               <div
                 class="w-6 h-6 rounded-full bg-gradient-to-r from-[#FF9500] to-[#FF4D00] text-white flex items-center justify-center font-bold text-xs shadow-xs">
@@ -280,7 +278,8 @@
         <div
           class="flex items-center justify-between gap-3 p-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-800/60">
           <img [src]="item.product.imageUrl" [alt]="item.product.name"
-            class="w-12 h-12 rounded-lg object-cover bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shrink-0" />
+            class="w-12 h-12 rounded-lg object-cover bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shrink-0"
+            onerror="this.src='/logo/ebuyzy-icon-2.png'" />
           <div class="flex-1 min-w-0">
             <h3 class="text-xs font-bold text-gray-900 dark:text-gray-100 truncate" [title]="item.product.name">
               {{ item.product.name }}
@@ -692,8 +691,9 @@
 
     <!-- My Orders / Profile / Sign In Tab -->
     @if (authService.isAuthenticated()) {
-    <a routerLink="/profile" routerLinkActive="text-[#FF9500] dark:text-[#FFD600] font-bold"
-      class="flex flex-col items-center justify-center py-1 px-3 text-[10px] text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors focus-visible:outline-none">
+    <a routerLink="/profile"
+      routerLinkActive="text-[#FF9500] dark:text-[#FFD600] font-bold"
+      class="flex flex-col items-center justify-center py-1 px-3 text-[10px] text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors focus-visible:outline-none cursor-pointer">
       <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
           d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />

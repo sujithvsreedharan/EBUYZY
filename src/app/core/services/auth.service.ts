@@ -3,7 +3,6 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { catchError, delay, map, switchMap, tap } from 'rxjs/operators';
 import { AdminPagePermission } from '../models/sub-admin.model';
-import { SubAdminService } from './sub-admin.service';
 import { apiUrl } from '../../app.constant';
 
 export type UserRole = 'admin' | 'manager' | 'sub_admin' | 'delivery_person' | 'customer';
@@ -52,6 +51,15 @@ export interface RegistrationResponse {
   success: boolean;
   message: string;
   userId?: number;
+  token?: string;
+  user?: {
+    id: number | string;
+    name: string;
+    email?: string;
+    mobile?: string;
+    phone?: string;
+    role?: string;
+  };
 }
 
 export interface LoginResponse {
@@ -105,7 +113,6 @@ export interface StaffInitialResponse {
 })
 export class AuthService {
   private readonly http = inject(HttpClient);
-  private readonly subAdminService = inject(SubAdminService);
   private readonly baseUrl = apiUrl;
 
   private readonly TOKEN_KEY = 'ebuyzy_auth_token';
@@ -182,7 +189,7 @@ export class AuthService {
   /**
    * Universal Login for EBUYZY:
    * Calls POST /api/login, maps user roles, and stores JWT session.
-   * Includes fallback for demo/seed accounts if offline.
+   * Only authenticates via backend APIs.
    */
   login(identifier: string, password: string): Observable<{ success: boolean; user?: AuthUser; token?: string; error?: string }> {
     const cleanId = identifier.trim();
@@ -201,7 +208,7 @@ export class AuthService {
                 ? 'admin'
                 : rawRole === 'delivery_person' || rawRole === 'delivery_partner' || rawRole.includes('delivery')
                 ? 'delivery_person'
-                : rawRole === 'sub_admin'
+                : rawRole === 'sub_admin' || rawRole === 'subadmin'
                 ? 'sub_admin'
                 : 'customer';
 
@@ -211,7 +218,12 @@ export class AuthService {
               email: res.user.email || (cleanId.includes('@') ? cleanId : `${cleanId}@customer.ebuyzy.in`),
               phone: res.user.mobile || (!cleanId.includes('@') ? cleanId : undefined),
               role: mappedRole,
-              permissions: mappedRole === 'delivery_person' ? ['assigned_orders'] : undefined,
+              permissions:
+                mappedRole === 'delivery_person'
+                  ? ['assigned_orders']
+                  : mappedRole === 'sub_admin'
+                  ? ['orders', 'dashboard']
+                  : undefined,
               isSuperAdmin: mappedRole === 'admin'
             };
 
@@ -221,98 +233,24 @@ export class AuthService {
           return { success: false, error: res.message || 'Login failed' };
         }),
         catchError((err) => {
-          const fallback = this.checkMockLoginFallback(cleanId, password);
-          if (fallback) {
-            return of(fallback);
-          }
-          const msg = err?.error?.message || 'Invalid credentials. Please try again.';
+          const msg =
+            err?.error?.message ||
+            (err?.status === 0
+              ? 'Cannot connect to backend server. Please check your network connection.'
+              : 'Invalid credentials. Please try again.');
           return of({ success: false, error: msg });
         })
       );
   }
 
   /**
-   * Fallback for dev / mock seed accounts
-   */
-  private checkMockLoginFallback(identifier: string, password: string): { success: boolean; user?: AuthUser; error?: string } | null {
-    const cleanId = identifier.trim().toLowerCase();
-
-    // 1. Admin Demo Credentials
-    const isAdminCredentials =
-      (cleanId === 'admin@ebuyzy.in' || cleanId === 'admin' || cleanId === '9847000111' || cleanId.startsWith('admin')) &&
-      (password === 'admin123' || password === 'admin');
-
-    if (isAdminCredentials) {
-      const mockToken = 'mock_jwt_ebuyzy_admin_' + Date.now();
-      const adminUser: AuthUser = {
-        id: 'adm_01',
-        name: 'Anand Varma (Store Admin)',
-        email: cleanId.includes('@') ? cleanId : 'admin@ebuyzy.in',
-        phone: '9847000111',
-        role: 'admin'
-      };
-      this.persistSession(mockToken, adminUser);
-      return { success: true, user: adminUser };
-    }
-
-    // 2. Staff Credentials from SubAdminService
-    const matchingStaff = this.subAdminService.findStaffByCredentials(identifier, password);
-    if (matchingStaff) {
-      if (!matchingStaff.isActive) {
-        const staffTypeLabel = matchingStaff.type === 'delivery_person' ? 'delivery partner' : 'sub-admin';
-        return {
-          success: false,
-          error: `Your ${staffTypeLabel} account has been deactivated by Super Admin.`
-        };
-      }
-
-      const isDelivery = matchingStaff.type === 'delivery_person';
-      const mockToken = `mock_jwt_ebuyzy_${isDelivery ? 'delivery' : 'subadmin'}_` + Date.now();
-      const staffUser: AuthUser = {
-        id: matchingStaff.id,
-        name: matchingStaff.name,
-        email: matchingStaff.email,
-        phone: matchingStaff.phone,
-        role: isDelivery ? 'delivery_person' : 'sub_admin',
-        roleTitle: matchingStaff.roleTitle,
-        permissions: matchingStaff.permissions,
-        vehicleType: matchingStaff.vehicleType,
-        vehicleNumber: matchingStaff.vehicleNumber,
-        zone: matchingStaff.zone,
-        isSuperAdmin: false
-      };
-      this.persistSession(mockToken, staffUser);
-      return { success: true, user: staffUser };
-    }
-
-    // 3. Demo Customer Credentials
-    if (cleanId === '9847123450' || cleanId === 'fathima@ebuyzy.in' || cleanId === 'fathima') {
-      const mockToken = 'mock_jwt_ebuyzy_customer_' + Date.now();
-      const customerUser: AuthUser = {
-        id: 'cust_801',
-        name: 'Fathima Raheem',
-        email: 'fathima.raheem@ebuyzy.in',
-        phone: '9847123450',
-        role: 'customer',
-        address: 'Flat 4B, Olive Greens, Infopark Road, Kakkanad',
-        locality: 'Infopark Road, Kakkanad',
-        pincode: '682042'
-      };
-      this.persistSession(mockToken, customerUser);
-      return { success: true, user: customerUser };
-    }
-
-    return null;
-  }
-
-  /**
    * New Customer Sign Up:
    * Calls POST /api/registerCustomer and auto-logs the user in on success.
    */
-  signup(name: string, identifier: string, password: string, phone?: string): Observable<{ success: boolean; user?: AuthUser; error?: string }> {
-    const cleanId = identifier.trim();
-    const cleanPhone = (phone || (cleanId.includes('@') ? '' : cleanId)).replace(/\D/g, '').slice(-10);
-    const cleanEmail = cleanId.includes('@') ? cleanId.toLowerCase() : undefined;
+  signup(name: string, identifierOrMobile: string, password: string, phone?: string): Observable<{ success: boolean; user?: AuthUser; token?: string; error?: string }> {
+    const rawMobile = phone || identifierOrMobile;
+    const cleanPhone = rawMobile.replace(/\D/g, '').slice(-10);
+    const cleanEmail = identifierOrMobile.includes('@') ? identifierOrMobile.trim().toLowerCase() : undefined;
 
     if (!name || name.trim().length < 2) {
       return of({ success: false, error: 'Please enter your full name.' });
@@ -338,7 +276,22 @@ export class AuthService {
         if (!regRes.success) {
           return of({ success: false, error: regRes.message || 'Registration failed.' });
         }
-        // Auto-login newly registered customer with their mobile & password
+
+        // If backend returned token and user on registration, log in directly without a 2nd call!
+        if (regRes.token && regRes.user) {
+          const authUser: AuthUser = {
+            id: String(regRes.user.id || regRes.userId),
+            name: regRes.user.name || name.trim(),
+            email: regRes.user.email || cleanEmail || `${cleanPhone}@customer.ebuyzy.in`,
+            phone: regRes.user.mobile || regRes.user.phone || cleanPhone,
+            role: 'customer',
+            isSuperAdmin: false
+          };
+          this.persistSession(regRes.token, authUser);
+          return of({ success: true, user: authUser, token: regRes.token });
+        }
+
+        // Fallback: auto-login newly registered customer with their mobile & password
         return this.login(cleanPhone, password);
       }),
       catchError((err) => {
@@ -389,6 +342,56 @@ export class AuthService {
     this.closeAuthModal();
   }
 
+  /**
+   * Fetch live user profile and addresses from backend: POST /api/me/profile
+   */
+  getUserProfileApi(): Observable<{ success: boolean; profile?: any; addresses?: any[]; user?: any; message?: string }> {
+    const token = this.getToken();
+    const headers = token ? new HttpHeaders({ Authorization: `Bearer ${token}` }) : undefined;
+
+    return this.http.post<{ success: boolean; profile?: any; addresses?: any[]; user?: any; message?: string }>(
+      `${this.baseUrl}/api/me/profile`,
+      {},
+      { headers }
+    ).pipe(
+      tap((res) => {
+        if (res.success && (res.profile || res.user)) {
+          const current = this._currentUser();
+          const p = res.profile || res.user;
+          const defaultAddr = (res.addresses || []).find((a: any) => a.isDefault) || (res.addresses || [])[0];
+          const updatedUser: AuthUser = {
+            id: current?.id || String(p.id || p.USER_SLNO || ''),
+            name: p.name || p.USER_NAME || current?.name || '',
+            email: p.email || p.USER_EMAIL || current?.email,
+            phone: p.mobile || p.USER_MOBILE || current?.phone || '',
+            role: current?.role || 'customer',
+            address: defaultAddr?.main_address || defaultAddr?.address || current?.address,
+            locality: defaultAddr?.city ? `${defaultAddr.city}, ${defaultAddr.district || ''}`.trim() : current?.locality,
+            pincode: defaultAddr?.pin || defaultAddr?.pincode || current?.pincode
+          };
+          this._currentUser.set(updatedUser);
+          try {
+            localStorage.setItem(this.USER_KEY, JSON.stringify(updatedUser));
+          } catch {}
+        }
+      })
+    );
+  }
+
+  /**
+   * Save / update address in backend: POST /api/user/address
+   */
+  saveAddressApi(payload: { address: string; locality?: string; pincode?: string; name?: string; phone?: string; gps?: string; addressLine2?: string }): Observable<{ success: boolean; message?: string; addressId?: number }> {
+    const token = this.getToken();
+    const headers = token ? new HttpHeaders({ Authorization: `Bearer ${token}` }) : undefined;
+
+    return this.http.post<{ success: boolean; message?: string; addressId?: number }>(
+      `${this.baseUrl}/api/user/address`,
+      payload,
+      { headers }
+    );
+  }
+
   updateProfile(updatedData: Partial<AuthUser>): Observable<{ success: boolean; user?: AuthUser; error?: string }> {
     const current = this._currentUser();
     if (!current) {
@@ -411,6 +414,26 @@ export class AuthService {
     } catch {}
 
     this._currentUser.set(updatedUser);
+
+    const token = this.getToken();
+    if (token) {
+      const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
+      return this.http
+        .post<{ success: boolean; message?: string }>(
+          `${this.baseUrl}/api/user/profile`,
+          {
+            name: updatedData.name,
+            phone: updatedData.phone,
+            email: updatedData.email
+          },
+          { headers }
+        )
+        .pipe(
+          map((res) => ({ success: res.success, user: updatedUser })),
+          catchError(() => of({ success: true, user: updatedUser }))
+        );
+    }
+
     return of({ success: true, user: updatedUser }).pipe(delay(200));
   }
 

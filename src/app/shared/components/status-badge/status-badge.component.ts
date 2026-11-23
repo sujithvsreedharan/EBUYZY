@@ -24,6 +24,10 @@ export class StatusBadgeComponent {
     switch (this.status()) {
       case 'New':
         return 'bg-amber-50 text-amber-800 border-amber-200';
+      case 'Packing':
+        return 'bg-orange-50 text-orange-800 border-orange-200';
+      case 'Packed':
+        return 'bg-purple-50 text-purple-800 border-purple-200';
       case 'Confirmed':
         return 'bg-blue-50 text-blue-800 border-blue-200';
       case 'Out for delivery':
@@ -41,10 +45,14 @@ export class StatusBadgeComponent {
     switch (this.status()) {
       case 'New':
         return 'bg-amber-500';
+      case 'Packing':
+        return 'bg-orange-500 animate-pulse';
+      case 'Packed':
+        return 'bg-purple-500';
       case 'Confirmed':
         return 'bg-blue-500';
       case 'Out for delivery':
-        return 'bg-sky-500';
+        return 'bg-sky-500 animate-pulse';
       case 'Delivered':
         return 'bg-[#FF9500]';
       case 'Cancelled':

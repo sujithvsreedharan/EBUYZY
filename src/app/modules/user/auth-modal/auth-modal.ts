@@ -29,7 +29,7 @@ export class AuthModal {
 
   readonly signUpForm: FormGroup = this.fb.group({
     name: ['', [Validators.required, Validators.minLength(2)]],
-    identifier: ['', [Validators.required, Validators.minLength(4)]],
+    mobile: ['', [Validators.required, Validators.pattern(/^[6-9]\d{9}$/)]],
     password: ['', [Validators.required, Validators.minLength(8)]]
   });
 
@@ -98,9 +98,9 @@ export class AuthModal {
     this.isLoading.set(true);
     this.errorMessage.set(null);
 
-    const { name, identifier, password } = this.signUpForm.getRawValue();
+    const { name, mobile, password } = this.signUpForm.getRawValue();
 
-    this.authService.signup(name, identifier, password).subscribe({
+    this.authService.signup(name, mobile, password).subscribe({
       next: (res) => {
         this.isLoading.set(false);
         if (res.success && res.user) {
@@ -118,23 +118,5 @@ export class AuthModal {
         this.errorMessage.set('An unexpected error occurred. Please try again.');
       }
     });
-  }
-
-  fillAdminDemo(): void {
-    this.authService.switchModalMode('signin');
-    this.signInForm.patchValue({
-      identifier: 'admin@ebuyzy.in',
-      password: 'admin123'
-    });
-    this.errorMessage.set(null);
-  }
-
-  fillCustomerDemo(): void {
-    this.authService.switchModalMode('signin');
-    this.signInForm.patchValue({
-      identifier: '9847123450',
-      password: 'user123'
-    });
-    this.errorMessage.set(null);
   }
 }

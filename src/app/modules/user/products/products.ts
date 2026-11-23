@@ -8,6 +8,7 @@ import { CategoryService } from '../../../core/services/category.service';
 import { CartService } from '../../../core/services/cart.service';
 import { Product } from '../../../core/models/product.model';
 import { Category } from '../../../core/models/category.model';
+import { ProductDetailModalComponent } from '../../../shared/components/product-detail-modal/product-detail-modal.component';
 
 export interface CategoryTile {
   id: string;
@@ -21,7 +22,7 @@ export interface CategoryTile {
 @Component({
   selector: 'app-user-products',
   standalone: true,
-  imports: [CommonModule, FormsModule, DecimalPipe],
+  imports: [CommonModule, FormsModule, DecimalPipe, ProductDetailModalComponent],
   templateUrl: './products.html',
   styleUrl: './products.css',
 })
@@ -206,6 +207,15 @@ export class Products implements OnInit {
   }
 
   readonly selectedProductForUnits = signal<Product | null>(null);
+  readonly selectedProductForDetail = signal<Product | null>(null);
+
+  openProductDetailModal(product: Product): void {
+    this.selectedProductForDetail.set(product);
+  }
+
+  closeProductDetailModal(): void {
+    this.selectedProductForDetail.set(null);
+  }
 
   getItemQty(productId: string): number {
     return this.cartService.getItemQuantity(productId);
