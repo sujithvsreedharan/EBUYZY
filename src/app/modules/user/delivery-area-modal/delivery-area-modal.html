@@ -23,18 +23,11 @@
 
         <div class="space-y-1">
           <h2 id="delivery-modal-title" class="text-xl font-bold tracking-tight text-gray-900 dark:text-white">
-            Check Delivery Availability
+            Check Store &amp; Delivery Availability
           </h2>
           <p class="text-xs text-gray-500 dark:text-gray-400 max-w-xs mx-auto">
-            Allow location access to check if your address is within our store delivery radius.
+            Allow GPS location to find your nearest store and check express delivery availability to your address.
           </p>
-        </div>
-
-        <!-- Store Radius Pill -->
-        <div
-          class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-700 dark:text-gray-300">
-          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-          <span>{{ storeName() }} &bull; {{ storeRadius() }} km radius</span>
         </div>
 
         <!-- Big Allow GPS Button -->
@@ -42,7 +35,7 @@
           <button type="button" (click)="requestGpsAndCheck()"
             class="w-full py-3 px-5 rounded-xl bg-gradient-to-r from-[#FF9500] to-[#FF4D00] hover:from-[#e08500] hover:to-[#e04000] text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]">
             <span>📍</span>
-            <span>Allow GPS &amp; Check Location</span>
+            <span>Allow GPS &amp; Find Store</span>
           </button>
         </div>
 
@@ -67,9 +60,9 @@
         </div>
 
         <div class="space-y-1">
-          <h3 class="text-lg font-bold text-gray-900 dark:text-white">Checking Store Availability...</h3>
+          <h3 class="text-lg font-bold text-gray-900 dark:text-white">Finding Nearest Store...</h3>
           <p class="text-xs text-gray-500 dark:text-gray-400">
-            Verifying delivery coverage from {{ storeName() }}...
+            Sending your GPS location to check store availability and delivery coverage...
           </p>
         </div>
       </div>
@@ -80,7 +73,7 @@
       @if (checkResult(); as result) {
       <div class="space-y-4">
         @if (result.isDeliverable) {
-        <!-- DELIVERABLE: UNDER STORE RADIUS -->
+        <!-- DELIVERABLE: STORE AVAILABLE & WITHIN RADIUS -->
         <div
           class="w-16 h-16 rounded-2xl bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border-2 border-emerald-400 flex items-center justify-center mx-auto text-3xl shadow-sm">
           ✅
@@ -88,34 +81,64 @@
 
         <div class="space-y-1">
           <h2 class="text-xl font-bold tracking-tight text-emerald-900 dark:text-emerald-300">
-            Delivery is Available!
+            {{ result.message || 'Store Available' }}
           </h2>
           <p class="text-xs text-gray-600 dark:text-gray-300">
-            Great news! You are within our store delivery radius.
+            {{ result.description || 'This store delivers to your location. You can continue shopping.' }}
           </p>
         </div>
 
-        <!-- Info details card -->
+        <!-- Info details card populated from backend getStoreDetails -->
         <div
-          class="p-4 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs space-y-1.5 text-left">
+          class="p-4 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs space-y-2 text-left">
+          @if (result.storeName) {
+          <div class="flex items-center justify-between">
+            <span class="text-gray-600 dark:text-gray-400">Store:</span>
+            <span class="font-bold text-gray-900 dark:text-white">
+              {{ result.storeName }}
+            </span>
+          </div>
+          }
+          @if (result.storeAddress) {
+          <div class="flex items-start justify-between gap-2">
+            <span class="text-gray-600 dark:text-gray-400 shrink-0">Store address:</span>
+            <span class="font-medium text-gray-800 dark:text-gray-200 text-right truncate">
+              {{ result.storeAddress }}
+            </span>
+          </div>
+          }
+          @if (result.distanceKm > 0) {
           <div class="flex items-center justify-between">
             <span class="text-gray-600 dark:text-gray-400">Distance from store:</span>
             <span class="font-bold text-emerald-900 dark:text-emerald-300 font-mono">
               {{ result.distanceKm }} km
             </span>
           </div>
+          }
+          @if (result.serviceRadiusKm) {
           <div class="flex items-center justify-between">
-            <span class="text-gray-600 dark:text-gray-400">Service radius:</span>
+            <span class="text-gray-600 dark:text-gray-400">Delivery radius:</span>
             <span class="font-bold text-gray-800 dark:text-gray-200">
-              Within {{ result.serviceRadiusKm || storeRadius() }} km
+              Within {{ result.serviceRadiusKm }} km
             </span>
           </div>
+          }
+          @if (result.deliveryTime) {
           <div class="flex items-center justify-between pt-1 border-t border-emerald-200/60 dark:border-emerald-800">
             <span class="text-gray-600 dark:text-gray-400">Delivery speed:</span>
             <span class="font-bold text-emerald-800 dark:text-emerald-300">
-              ⚡ {{ result.deliveryTime || '20-30 mins express' }}
+              ⚡ {{ result.deliveryTime }}
             </span>
           </div>
+          }
+          @if (result.deliveryFee != null) {
+          <div class="flex items-center justify-between">
+            <span class="text-gray-600 dark:text-gray-400">Delivery charge:</span>
+            <span class="font-bold text-gray-800 dark:text-gray-200 font-mono">
+              ₹{{ result.deliveryFee }}
+            </span>
+          </div>
+          }
         </div>
 
         <button type="button" (click)="confirmAndContinue()"
@@ -131,21 +154,19 @@
 
         <div class="space-y-1">
           <h2 class="text-xl font-bold tracking-tight text-rose-900 dark:text-rose-300">
-            Delivery Not Available
+            {{ result.message || 'Store Unavailable' }}
           </h2>
           <p class="text-xs text-gray-500 dark:text-gray-400">
-            @if (result.distanceKm > 0) {
-            Your location is approximately <strong>{{ result.distanceKm }} km away</strong>.
-            } @else {
-            {{ result.message || 'We do not currently deliver to this location.' }}
-            }
+            {{ result.description || 'Sorry! This store does not currently serve your location. Please select another nearby store.' }}
           </p>
         </div>
 
+        @if (result.distanceKm > 0 && result.serviceRadiusKm) {
         <div
           class="p-3.5 rounded-xl bg-rose-50/70 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-xs text-rose-800 dark:text-rose-300">
-          We currently deliver only within <strong>{{ result.serviceRadiusKm || storeRadius() }} km</strong> of {{ result.storeName || storeName() }}.
+          Your location is approximately <strong>{{ result.distanceKm }} km away</strong>@if (result.storeName) { from {{ result.storeName }} } (delivery radius: {{ result.serviceRadiusKm }} km).
         </div>
+        }
 
         <div class="pt-2 space-y-2">
           <button type="button" (click)="closeModal()"

@@ -96,6 +96,16 @@ export class SettingsService {
   }
 
   /**
+   * Applies and broadcasts live store details received from /api/getStoreDetails
+   */
+  applyStoreDetails(res: StoreDetailsResponse): ShopSettings {
+    const settings = this.mapStoreResponseToSettings(res);
+    this.persistSettings(settings);
+    this.settingsSubject.next(settings);
+    return settings;
+  }
+
+  /**
    * Retrieves shop settings populated from /api/getStoreDetails
    */
   getSettings(

@@ -18,7 +18,11 @@
         </span>
         <span class="text-white/40 hidden xs:inline">&bull;</span>
         <span class="hidden xs:inline text-white/80">
-          Within {{ settings()?.deliveryRadiusKm ?? 5 }} km radius of {{ settings()?.shopName || 'Store' }}
+          @if (settings()?.shopName) {
+          Express grocery delivery from {{ settings()?.shopName }}
+          } @else {
+          Express grocery delivery directly to your doorstep
+          }
         </span>
       </div>
 
@@ -373,7 +377,7 @@
           </span>
           } @else {
           <span class="font-bold text-gray-900 dark:text-white">
-            Check store delivery area ({{ settings()?.deliveryRadiusKm ?? 5 }} km)
+            Check store delivery area
           </span>
           }
         </div>

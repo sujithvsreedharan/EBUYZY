@@ -23,8 +23,10 @@ export interface DeliveryCheckResult {
   pincode: string;
   distanceKm: number;
   message: string;
+  description?: string;
   serviceRadiusKm?: number;
   storeName?: string;
+  storeAddress?: string;
   deliveryTime?: string;
   minOrderAmount?: number;
   deliveryFee?: number;
@@ -117,7 +119,7 @@ export class DeliveryAreaService {
           next: (res) => {
             if (res.isDeliverable) {
               this.confirmLocation({
-                locality: res.locality,
+                locality: res.storeAddress || res.locality || res.storeName || '',
                 pincode: res.pincode,
                 distanceKm: res.distanceKm,
                 isDeliverable: true,
@@ -153,81 +155,53 @@ export class DeliveryAreaService {
   checkAvailabilityWithApi(latitude: number, longitude: number): Observable<DeliveryCheckResult> {
     return this.settingsService.getStoreDetails(latitude, longitude).pipe(
       map((res: StoreDetailsResponse) => {
-        // Sync application settings from backend response
-        const mappedSettings = this.settingsService.mapStoreResponseToSettings(res);
-        this.settingsService.updateSettings(mappedSettings).subscribe();
-
         const store = res.storeDetails && res.storeDetails.length > 0 ? res.storeDetails[0] : null;
         const delivery = res.deliveryDetails && res.deliveryDetails.length > 0 ? res.deliveryDetails[0] : null;
 
+        // Apply live store details from backend into settings
+        if (store) {
+          this.settingsService.applyStoreDetails(res);
+        }
+
         const isDeliverable = res.status === 1;
-        const radius = store?.radius != null ? Number(store.radius) : (mappedSettings.deliveryRadiusKm || 5);
+        const radius = store?.radius != null ? Number(store.radius) : undefined;
+        const distanceKm = store?.DISTANCE_KM != null ? Number(Number(store.DISTANCE_KM).toFixed(1)) : 0;
 
-        // Distance in km from backend or Haversine calculation
-        let distanceKm = store?.DISTANCE_KM != null ? Number(Number(store.DISTANCE_KM).toFixed(1)) : 0;
-        if (store?.DISTANCE_KM == null || isNaN(distanceKm)) {
-          const storeLat = Number(store?.lattitude || mappedSettings.shopLatitude);
-          const storeLng = Number(store?.longitude || mappedSettings.shopLongitude);
-          distanceKm = Math.round(this.calculateHaversineDistance(storeLat, storeLng, latitude, longitude) * 10) / 10;
-        }
+        const minTime = delivery?.min_time != null ? delivery.min_time : null;
+        const maxTime = delivery?.['max-time'] != null ? delivery['max-time'] : null;
+        const deliveryTimeStr = minTime != null && maxTime != null ? `${minTime}-${maxTime} mins express` : '';
 
-        const deliveryTimeStr = delivery?.min_time && delivery?.['max-time']
-          ? `${delivery.min_time}-${delivery['max-time']} mins express`
-          : '20-30 mins express';
-
-        const storeName = store?.store_name || mappedSettings.shopName || 'Ebuyzy Store';
-        const locality = isDeliverable ? (store?.address || 'Current Location') : 'Current Location';
-
-        let message = res.message;
-        if (!message) {
-          message = isDeliverable
-            ? `Store is available! We deliver to your location in ${deliveryTimeStr}.`
-            : `Your location is outside our ${radius} km delivery radius.`;
-        }
+        const storeName = store?.store_name || '';
+        const storeAddress = store?.address || '';
+        const locality = storeAddress || (isDeliverable ? 'Store Area' : '');
 
         return {
           isDeliverable,
           locality,
           pincode: '',
           distanceKm,
-          message,
+          message: res.message || (isDeliverable ? 'Store Available' : 'Store Unavailable'),
+          description: res.description || '',
           serviceRadiusKm: radius,
           storeName,
+          storeAddress,
           deliveryTime: deliveryTimeStr,
           minOrderAmount: delivery?.min_order_price,
           deliveryFee: delivery?.fixed_charge
         };
       }),
       catchError((err) => {
-        console.error('getStoreDetails API error, using fallback calculation:', err);
-        return of(this.checkCoordinatesFallback(latitude, longitude));
+        console.error('getStoreDetails API error:', err);
+        return of({
+          isDeliverable: false,
+          locality: '',
+          pincode: '',
+          distanceKm: 0,
+          message: 'Store service unavailable',
+          description: 'Could not connect to the store service. Please check your network and try again.'
+        });
       })
     );
-  }
-
-  /**
-   * Fallback check for coordinates if network or backend API is unreachable
-   */
-  private checkCoordinatesFallback(lat: number, lng: number): DeliveryCheckResult {
-    const storeLat = 11.2497;
-    const storeLng = 75.7792;
-    const maxRadius = 5.0;
-
-    const distanceKm = Math.round(this.calculateHaversineDistance(storeLat, storeLng, lat, lng) * 10) / 10;
-    const isDeliverable = distanceKm <= maxRadius;
-
-    return {
-      isDeliverable,
-      locality: 'Detected Location',
-      pincode: '',
-      distanceKm,
-      message: isDeliverable
-        ? `Store is available! You are ~${distanceKm} km from our store.`
-        : `Your location is ~${distanceKm} km away, which is outside our ${maxRadius} km delivery radius.`,
-      serviceRadiusKm: maxRadius,
-      storeName: 'Ebuyzy Store',
-      deliveryTime: '20-30 mins express'
-    };
   }
 
   confirmLocation(loc: DeliveryLocation): void {
@@ -245,28 +219,5 @@ export class DeliveryAreaService {
       localStorage.removeItem(this.STORAGE_LOCATION_KEY);
     } catch {}
     this.selectedLocation.set(null);
-  }
-
-  private calculateHaversineDistance(
-    lat1: number,
-    lon1: number,
-    lat2: number,
-    lon2: number
-  ): number {
-    const R = 6371; // Earth's radius in km
-    const dLat = this.deg2rad(lat2 - lat1);
-    const dLon = this.deg2rad(lon2 - lon1);
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(this.deg2rad(lat1)) *
-        Math.cos(this.deg2rad(lat2)) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-  }
-
-  private deg2rad(deg: number): number {
-    return deg * (Math.PI / 180);
   }
 }

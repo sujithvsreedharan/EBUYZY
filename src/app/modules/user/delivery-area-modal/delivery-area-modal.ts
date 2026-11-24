@@ -23,9 +23,9 @@ export class DeliveryAreaModal {
   readonly checkResult = signal<DeliveryCheckResult | null>(null);
   readonly errorMessage = signal<string | null>(null);
 
-  // Dynamic store name and service radius
-  readonly storeName = computed(() => this.checkResult()?.storeName || this.settings()?.shopName || 'Ebuyzy Store');
-  readonly storeRadius = computed(() => this.checkResult()?.serviceRadiusKm || this.settings()?.deliveryRadiusKm || 5);
+  // Dynamic store name and service radius from live API result
+  readonly storeName = computed(() => this.checkResult()?.storeName || '');
+  readonly storeRadius = computed(() => this.checkResult()?.serviceRadiusKm || 0);
 
   closeModal(): void {
     this.deliveryService.closeModal();
@@ -83,7 +83,7 @@ export class DeliveryAreaModal {
     const res = this.checkResult();
     if (res && res.isDeliverable) {
       this.deliveryService.confirmLocation({
-        locality: res.locality,
+        locality: res.storeAddress || res.locality || res.storeName || 'My Location',
         pincode: res.pincode,
         distanceKm: res.distanceKm,
         isDeliverable: true,
