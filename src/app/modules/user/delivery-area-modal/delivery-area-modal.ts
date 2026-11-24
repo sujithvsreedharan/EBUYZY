@@ -18,12 +18,10 @@ export class DeliveryAreaModal {
 
   readonly settings = toSignal(this.settingsService.getSettings());
 
-  // Modal Step State: 'prompt' | 'checking' | 'result' | 'fallback_pincode'
-  readonly currentStep = signal<'prompt' | 'checking' | 'result' | 'fallback_pincode'>('prompt');
+  // Modal Step State: 'prompt' | 'checking' | 'result' | 'error'
+  readonly currentStep = signal<'prompt' | 'checking' | 'result' | 'error'>('prompt');
   readonly checkResult = signal<DeliveryCheckResult | null>(null);
   readonly errorMessage = signal<string | null>(null);
-  readonly manualPincode = signal<string>('');
-  readonly isSubmitting = signal<boolean>(false);
 
   // Dynamic store name and service radius
   readonly storeName = computed(() => this.checkResult()?.storeName || this.settings()?.shopName || 'Ebuyzy Store');
@@ -36,13 +34,13 @@ export class DeliveryAreaModal {
     this.errorMessage.set(null);
   }
 
-  // 1. Allow GPS & Check Store Availability via Backend API
+  // Allow GPS & Check Store Availability via Backend /api/getStoreDetails API
   requestGpsAndCheck(): void {
     this.errorMessage.set(null);
 
-    if (!('geolocation' in navigator)) {
-      this.currentStep.set('fallback_pincode');
+    if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
       this.errorMessage.set('Geolocation is not supported by your browser.');
+      this.currentStep.set('error');
       return;
     }
 
@@ -52,57 +50,33 @@ export class DeliveryAreaModal {
       (position) => {
         const { latitude, longitude } = position.coords;
 
-        // Verify with live backend /api/getStoreDetails API
+        // Send GPS coordinates to backend /api/getStoreDetails API
         this.deliveryService.checkAvailabilityWithApi(latitude, longitude).subscribe({
           next: (result) => {
             this.checkResult.set(result);
             this.currentStep.set('result');
           },
           error: (err) => {
-            console.error('Delivery check error:', err);
-            this.errorMessage.set('Could not verify delivery area at this time. Please try entering your pincode.');
-            this.currentStep.set('fallback_pincode');
+            console.error('Store availability check error:', err);
+            this.errorMessage.set('Could not check store availability at this time. Please try again.');
+            this.currentStep.set('error');
           }
         });
       },
       (error) => {
         let msg = 'Location access was not granted.';
         if (error.code === error.PERMISSION_DENIED) {
-          msg = 'Location permission was denied. You can check delivery availability by entering your pincode.';
+          msg = 'Location permission was denied. Please allow location access in your device or browser settings.';
         } else if (error.code === error.POSITION_UNAVAILABLE) {
-          msg = 'Location information is currently unavailable from your device.';
+          msg = 'Location information is currently unavailable from your device. Please ensure GPS/Location is enabled.';
         } else if (error.code === error.TIMEOUT) {
-          msg = 'Location request timed out. Please try again or enter your pincode.';
+          msg = 'Location request timed out. Please tap Allow GPS to try again.';
         }
         this.errorMessage.set(msg);
-        this.currentStep.set('fallback_pincode');
+        this.currentStep.set('error');
       },
-      { timeout: 9000, enableHighAccuracy: true, maximumAge: 60000 }
+      { timeout: 15000, enableHighAccuracy: false, maximumAge: 30000 }
     );
-  }
-
-  // Fallback Manual Pincode Check via API
-  checkManualPincode(): void {
-    const pin = this.manualPincode().trim();
-    if (!pin || pin.length < 6) {
-      this.errorMessage.set('Please enter a valid 6-digit Indian postal pincode.');
-      return;
-    }
-
-    this.currentStep.set('checking');
-    this.errorMessage.set(null);
-
-    this.deliveryService.checkPincodeAvailability(pin).subscribe({
-      next: (result) => {
-        this.checkResult.set(result);
-        this.currentStep.set('result');
-      },
-      error: (err) => {
-        console.error('Pincode check error:', err);
-        this.errorMessage.set('Could not check delivery for this pincode. Please try again.');
-        this.currentStep.set('fallback_pincode');
-      }
-    });
   }
 
   confirmAndContinue(): void {

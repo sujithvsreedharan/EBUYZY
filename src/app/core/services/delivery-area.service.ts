@@ -1,15 +1,8 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
-import { Observable, of, from } from 'rxjs';
-import { map, catchError, switchMap } from 'rxjs/operators';
+import { Observable, of } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
 import { SettingsService } from './settings.service';
 import { StoreDetailsResponse } from '../models/settings.model';
-
-export interface ServicedArea {
-  name: string;
-  pincode: string;
-  distanceKm: number;
-  keywords: string[];
-}
 
 export interface DeliveryLocation {
   locality: string;
@@ -139,7 +132,7 @@ export class DeliveryAreaService {
         });
       },
       (err) => console.warn('Could not retrieve current position:', err),
-      { timeout: 8000, enableHighAccuracy: true, maximumAge: 60000 }
+      { timeout: 12000, enableHighAccuracy: false, maximumAge: 60000 }
     );
   }
 
@@ -155,11 +148,11 @@ export class DeliveryAreaService {
   }
 
   /**
-   * Live API verification: Calls backend /api/getStoreDetails with latitude & longitude
+   * Live API verification: Sends latitude & longitude directly to backend /api/getStoreDetails
    */
   checkAvailabilityWithApi(latitude: number, longitude: number): Observable<DeliveryCheckResult> {
     return this.settingsService.getStoreDetails(latitude, longitude).pipe(
-      switchMap(async (res: StoreDetailsResponse) => {
+      map((res: StoreDetailsResponse) => {
         // Sync application settings from backend response
         const mappedSettings = this.settingsService.mapStoreResponseToSettings(res);
         this.settingsService.updateSettings(mappedSettings).subscribe();
@@ -170,7 +163,7 @@ export class DeliveryAreaService {
         const isDeliverable = res.status === 1;
         const radius = store?.radius != null ? Number(store.radius) : (mappedSettings.deliveryRadiusKm || 5);
 
-        // Distance in km from backend or Haversine formula
+        // Distance in km from backend or Haversine calculation
         let distanceKm = store?.DISTANCE_KM != null ? Number(Number(store.DISTANCE_KM).toFixed(1)) : 0;
         if (store?.DISTANCE_KM == null || isNaN(distanceKm)) {
           const storeLat = Number(store?.lattitude || mappedSettings.shopLatitude);
@@ -182,8 +175,8 @@ export class DeliveryAreaService {
           ? `${delivery.min_time}-${delivery['max-time']} mins express`
           : '20-30 mins express';
 
-        // Reverse geocoding to retrieve human-readable locality & pincode
-        const geoInfo = await this.reverseGeocodeLocality(latitude, longitude);
+        const storeName = store?.store_name || mappedSettings.shopName || 'Ebuyzy Store';
+        const locality = isDeliverable ? (store?.address || 'Current Location') : 'Current Location';
 
         let message = res.message;
         if (!message) {
@@ -194,12 +187,12 @@ export class DeliveryAreaService {
 
         return {
           isDeliverable,
-          locality: geoInfo.locality || (isDeliverable ? 'Your Location' : 'Current Location'),
-          pincode: geoInfo.pincode || '',
+          locality,
+          pincode: '',
           distanceKm,
           message,
           serviceRadiusKm: radius,
-          storeName: store?.store_name || mappedSettings.shopName,
+          storeName,
           deliveryTime: deliveryTimeStr,
           minOrderAmount: delivery?.min_order_price,
           deliveryFee: delivery?.fixed_charge
@@ -213,58 +206,9 @@ export class DeliveryAreaService {
   }
 
   /**
-   * Pincode Verification: Attempts to locate coordinates from pincode and verify via getStoreDetails
-   */
-  checkPincodeAvailability(pincode: string): Observable<DeliveryCheckResult> {
-    const cleanPin = pincode.trim().replace(/\D/g, '');
-    if (cleanPin.length !== 6) {
-      return of({
-        isDeliverable: false,
-        locality: 'Invalid Pincode',
-        pincode: cleanPin,
-        distanceKm: 0,
-        message: 'Please enter a valid 6-digit Indian postal pincode.'
-      });
-    }
-
-    return from(this.fetchCoordsFromPincode(cleanPin)).pipe(
-      switchMap((coords) => {
-        if (coords) {
-          return this.checkAvailabilityWithApi(coords.lat, coords.lng).pipe(
-            map((result) => ({
-              ...result,
-              locality: coords.locality || result.locality,
-              pincode: cleanPin
-            }))
-          );
-        }
-
-        // If geocoding fails, fallback comparison
-        return of({
-          isDeliverable: false,
-          locality: `Pincode ${cleanPin}`,
-          pincode: cleanPin,
-          distanceKm: 0,
-          message: `Could not verify delivery area for pincode ${cleanPin}. Please use GPS to detect your location.`
-        });
-      }),
-      catchError(() =>
-        of({
-          isDeliverable: false,
-          locality: `Pincode ${cleanPin}`,
-          pincode: cleanPin,
-          distanceKm: 0,
-          message: `Delivery verification failed for pincode ${cleanPin}. Please use GPS location.`
-        })
-      )
-    );
-  }
-
-  /**
-   * Fallback check for coordinates if network or backend API fails
+   * Fallback check for coordinates if network or backend API is unreachable
    */
   private checkCoordinatesFallback(lat: number, lng: number): DeliveryCheckResult {
-    // Default store coordinates (Mukkam / Kozhikode store from defaultSettings)
     const storeLat = 11.2497;
     const storeLng = 75.7792;
     const maxRadius = 5.0;
@@ -284,84 +228,6 @@ export class DeliveryAreaService {
       storeName: 'Ebuyzy Store',
       deliveryTime: '20-30 mins express'
     };
-  }
-
-  /**
-   * Helper reverse geocoder using OpenStreetMap Nominatim
-   */
-  private async reverseGeocodeLocality(lat: number, lon: number): Promise<{ locality: string; pincode: string }> {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2500);
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
-        {
-          headers: { 'User-Agent': 'EbuyzyApp/1.0' },
-          signal: controller.signal
-        }
-      );
-      clearTimeout(timeoutId);
-
-      if (res.ok) {
-        const data = await res.json();
-        const addr = data.address || {};
-        const locality =
-          addr.suburb ||
-          addr.neighbourhood ||
-          addr.village ||
-          addr.town ||
-          addr.city_district ||
-          addr.city ||
-          addr.county ||
-          'Your Area';
-        const pincode = addr.postcode || '';
-        return { locality, pincode };
-      }
-    } catch {
-      // Ignore network timeout
-    }
-    return { locality: 'Your Location', pincode: '' };
-  }
-
-  /**
-   * Helper to lookup coordinates from a 6-digit Indian pincode
-   */
-  private async fetchCoordsFromPincode(pin: string): Promise<{ lat: number; lng: number; locality: string } | null> {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000);
-      const res = await fetch(`https://api.postalpincode.in/pincode/${pin}`, {
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data[0]?.Status === 'Success' && data[0]?.PostOffice?.length > 0) {
-          const po = data[0].PostOffice[0];
-          const query = `${po.Name}, ${po.District || po.Region}, ${po.State || 'Kerala'}, India`;
-          
-          // Geocode query to lat/lng
-          const geoRes = await fetch(
-            `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`,
-            { headers: { 'User-Agent': 'EbuyzyApp/1.0' } }
-          );
-          if (geoRes.ok) {
-            const geoList = await geoRes.json();
-            if (geoList && geoList.length > 0) {
-              return {
-                lat: parseFloat(geoList[0].lat),
-                lng: parseFloat(geoList[0].lon),
-                locality: po.Name
-              };
-            }
-          }
-        }
-      }
-    } catch {
-      // Fallback
-    }
-    return null;
   }
 
   confirmLocation(loc: DeliveryLocation): void {
