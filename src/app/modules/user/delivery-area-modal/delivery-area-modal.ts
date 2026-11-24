@@ -37,46 +37,89 @@ export class DeliveryAreaModal {
   // Allow GPS & Check Store Availability via Backend /api/getStoreDetails API
   requestGpsAndCheck(): void {
     this.errorMessage.set(null);
+    this.currentStep.set('checking');
+    console.log('[DeliveryModal] GPS button clicked. Requesting location...');
 
+    // If browser does not expose geolocation (e.g. non-HTTPS mobile browser)
     if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
-      this.errorMessage.set('Geolocation is not supported by your browser.');
-      this.currentStep.set('error');
+      console.warn('[DeliveryModal] navigator.geolocation is not available (likely insecure HTTP origin). Falling back to network IP location...');
+      this.fallbackToNetworkLocation('GPS is restricted on insecure HTTP connections. Attempting network location...');
       return;
     }
-
-    this.currentStep.set('checking');
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
-
-        // Send GPS coordinates to backend /api/getStoreDetails API
-        this.deliveryService.checkAvailabilityWithApi(latitude, longitude).subscribe({
-          next: (result) => {
-            this.checkResult.set(result);
-            this.currentStep.set('result');
-          },
-          error: (err) => {
-            console.error('Store availability check error:', err);
-            this.errorMessage.set('Could not check store availability at this time. Please try again.');
-            this.currentStep.set('error');
-          }
-        });
+        console.log('[DeliveryModal] Device GPS coordinates received:', { latitude, longitude });
+        this.verifyWithBackend(latitude, longitude);
       },
       (error) => {
-        let msg = 'Location access was not granted.';
-        if (error.code === error.PERMISSION_DENIED) {
-          msg = 'Location permission was denied. Please allow location access in your device or browser settings.';
-        } else if (error.code === error.POSITION_UNAVAILABLE) {
-          msg = 'Location information is currently unavailable from your device. Please ensure GPS/Location is enabled.';
-        } else if (error.code === error.TIMEOUT) {
-          msg = 'Location request timed out. Please tap Allow GPS to try again.';
+        console.warn('[DeliveryModal] GPS error callback reached:', error.code, error.message);
+        // Mobile browsers block GPS over HTTP (non-localhost) origins with PERMISSION_DENIED.
+        // Fall back to IP network geolocation automatically so the backend API is still reached!
+        this.fallbackToNetworkLocation(
+          error.code === error.PERMISSION_DENIED
+            ? 'GPS was blocked (mobile browsers require HTTPS for GPS). Trying network location...'
+            : 'GPS timed out. Trying network location...'
+        );
+      },
+      { timeout: 10000, enableHighAccuracy: false, maximumAge: 30000 }
+    );
+  }
+
+  // Fallback to free IP-based geolocation when GPS is blocked by mobile HTTP security
+  fallbackToNetworkLocation(initialReason?: string): void {
+    console.log('[DeliveryModal] Fetching network location from IP...');
+    this.currentStep.set('checking');
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
+
+    fetch('https://ipwho.is/', { signal: controller.signal })
+      .then((res) => {
+        clearTimeout(timeoutId);
+        if (!res.ok) throw new Error('Network IP location failed');
+        return res.json();
+      })
+      .then((data) => {
+        if (data && data.success && data.latitude != null && data.longitude != null) {
+          console.log('[DeliveryModal] Network location obtained successfully:', {
+            lat: data.latitude,
+            lon: data.longitude,
+            city: data.city
+          });
+          this.verifyWithBackend(Number(data.latitude), Number(data.longitude));
+        } else {
+          throw new Error('Invalid IP location payload');
+        }
+      })
+      .catch((err) => {
+        console.warn('[DeliveryModal] Network location fetch failed:', err);
+        let msg = initialReason || 'Could not detect location.';
+        if (typeof window !== 'undefined' && !window.isSecureContext) {
+          msg = 'Mobile browsers require HTTPS or Chrome flag for GPS on IP addresses. Enable location permission or try again.';
         }
         this.errorMessage.set(msg);
         this.currentStep.set('error');
+      });
+  }
+
+  // Sends coordinates directly to backend /api/getStoreDetails API
+  verifyWithBackend(latitude: number, longitude: number): void {
+    console.log('[DeliveryModal] Calling backend /api/getStoreDetails with coordinates:', { latitude, longitude });
+
+    this.deliveryService.checkAvailabilityWithApi(latitude, longitude).subscribe({
+      next: (result) => {
+        console.log('[DeliveryModal] Backend /api/getStoreDetails response received:', result);
+        this.checkResult.set(result);
+        this.currentStep.set('result');
       },
-      { timeout: 15000, enableHighAccuracy: false, maximumAge: 30000 }
-    );
+      error: (err) => {
+        console.error('[DeliveryModal] Backend /api/getStoreDetails error:', err);
+        this.errorMessage.set('Could not connect to backend store service. Please verify your connection and try again.');
+        this.currentStep.set('error');
+      }
+    });
   }
 
   confirmAndContinue(): void {

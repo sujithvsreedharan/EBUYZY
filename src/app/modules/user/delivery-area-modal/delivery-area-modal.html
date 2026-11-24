@@ -204,6 +204,10 @@
             <span>📍</span>
             <span>Allow GPS &amp; Try Again</span>
           </button>
+          <button type="button" (click)="fallbackToNetworkLocation()"
+            class="w-full py-2.5 px-4 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-xs font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+            Detect Via Network / IP
+          </button>
           <button type="button" (click)="closeModal()"
             class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 underline underline-offset-2">
             Skip for now &bull; Browse store
