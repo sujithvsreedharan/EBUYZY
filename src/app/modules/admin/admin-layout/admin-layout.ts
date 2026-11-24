@@ -1,7 +1,12 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { AuthService } from '../../../core/services/auth.service';
 import { SettingsService } from '../../../core/services/settings.service';
 import { ThemeService } from '../../../core/services/theme.service';
+import {
+  AdminNotificationService,
+  AdminNotification,
+  AdminNotificationType,
+} from '../../../core/services/admin-notification.service';
 import { ActivatedRoute, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
@@ -24,6 +29,7 @@ interface NavItem {
 export class AdminLayout {
   protected readonly authService = inject(AuthService);
   protected readonly themeService = inject(ThemeService);
+  protected readonly notificationService = inject(AdminNotificationService);
   private readonly settingsService = inject(SettingsService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -44,6 +50,13 @@ export class AdminLayout {
     });
   }
 
+  @HostListener('document:keydown.escape')
+  onEscapeKey(): void {
+    if (this.notificationService.isPopoverOpen()) {
+      this.notificationService.closePopover();
+    }
+  }
+
   readonly allNavItems: NavItem[] = [
     {
       label: 'Dashboard',
@@ -55,6 +68,12 @@ export class AdminLayout {
       label: 'Orders',
       route: '/admin/orders',
       permissionKey: 'orders',
+      badge: () => {
+        const count = this.notificationService
+          .allNotifications()
+          .filter((n) => n.type === 'order' && !n.read).length;
+        return count > 0 ? count : null;
+      },
       icon: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>`
     },
     {
@@ -67,6 +86,12 @@ export class AdminLayout {
       label: 'Products',
       route: '/admin/products',
       permissionKey: 'products',
+      badge: () => {
+        const count = this.notificationService
+          .allNotifications()
+          .filter((n) => n.type === 'stock' && !n.read).length;
+        return count > 0 ? count : null;
+      },
       icon: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>`
     },
     {

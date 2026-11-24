@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
@@ -7,6 +7,7 @@ import { CartService, AVAILABLE_COUPONS } from '../../../core/services/cart.serv
 import { SettingsService } from '../../../core/services/settings.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ThemeService } from '../../../core/services/theme.service';
+import { NotificationService, AppNotification } from '../../../core/services/notification.service';
 import { AuthModal } from '../auth-modal/auth-modal';
 import { DeliveryAreaModal } from '../delivery-area-modal/delivery-area-modal';
 import { DeliveryAreaService } from '../../../core/services/delivery-area.service';
@@ -23,6 +24,7 @@ export class UserLayout {
   protected readonly authService = inject(AuthService);
   protected readonly themeService = inject(ThemeService);
   protected readonly deliveryService = inject(DeliveryAreaService);
+  protected readonly notificationService = inject(NotificationService);
   private readonly settingsService = inject(SettingsService);
   private readonly router = inject(Router);
 
@@ -32,10 +34,54 @@ export class UserLayout {
   readonly settings = toSignal(this.settingsService.getSettings());
   readonly currentYear = new Date().getFullYear();
 
+  // Mobile Menu Drawer State
+  readonly isMobileMenuOpen = signal<boolean>(false);
+
   readonly userInitial = computed(() => {
     const user = this.authService.currentUser();
     return user?.name ? user.name.trim().charAt(0).toUpperCase() : 'U';
   });
+
+  @HostListener('document:keydown.escape')
+  onEscapeKey(): void {
+    if (this.isMobileMenuOpen()) {
+      this.closeMobileMenu();
+    }
+    if (this.notificationService.isPopoverOpen()) {
+      this.notificationService.closePopover();
+    }
+  }
+
+  toggleMobileMenu(): void {
+    this.isMobileMenuOpen.update((open) => !open);
+    if (this.isMobileMenuOpen()) {
+      this.notificationService.closePopover();
+    }
+  }
+
+  openMobileMenu(): void {
+    this.isMobileMenuOpen.set(true);
+    this.notificationService.closePopover();
+  }
+
+  closeMobileMenu(): void {
+    this.isMobileMenuOpen.set(false);
+  }
+
+  toggleNotification(): void {
+    this.notificationService.togglePopover();
+    if (this.notificationService.isPopoverOpen()) {
+      this.closeMobileMenu();
+    }
+  }
+
+  onNotificationClick(item: AppNotification): void {
+    this.notificationService.markAsRead(item.id);
+    this.notificationService.closePopover();
+    if (item.link) {
+      this.router.navigate([item.link]);
+    }
+  }
 
   applyCoupon(code?: string): void {
     const toApply = code || this.couponInput();
@@ -54,6 +100,26 @@ export class UserLayout {
 
   openSignInModal(): void {
     this.authService.openAuthModal('signin');
+  }
+
+  openSignInFromMenu(): void {
+    this.closeMobileMenu();
+    this.openSignInModal();
+  }
+
+  logoutFromMenu(): void {
+    this.closeMobileMenu();
+    this.logout();
+  }
+
+  openDeliveryModalFromMenu(): void {
+    this.closeMobileMenu();
+    this.deliveryService.openModal();
+  }
+
+  navigateToFromMenu(path: string): void {
+    this.closeMobileMenu();
+    this.router.navigate([path]);
   }
 
   proceedToCheckout(): void {

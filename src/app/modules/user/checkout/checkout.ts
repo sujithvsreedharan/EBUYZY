@@ -7,6 +7,7 @@ import { AdminOrderService } from '../../../core/services/admin-order.service';
 import { SettingsService } from '../../../core/services/settings.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { DeliveryAreaService } from '../../../core/services/delivery-area.service';
+import { NotificationService } from '../../../core/services/notification.service';
 import { toSignal } from '@angular/core/rxjs-interop';
 
 @Component({
@@ -23,6 +24,7 @@ export class Checkout implements OnInit {
   private readonly settingsService = inject(SettingsService);
   protected readonly authService = inject(AuthService);
   protected readonly deliveryService = inject(DeliveryAreaService);
+  private readonly notificationService = inject(NotificationService);
   private readonly router = inject(Router);
 
   readonly settings = toSignal(this.settingsService.getSettings());
@@ -207,6 +209,13 @@ export class Checkout implements OnInit {
               const orderRef = res.order.orderCode || String(res.order.orderId);
               this.orderSuccessMessage.set(`Order #${orderRef} placed successfully!`);
 
+              this.notificationService.addNotification({
+                title: `Order #${orderRef} Placed Successfully!`,
+                message: `Your grocery order #${orderRef} is placed and will be delivered within 30-45 minutes.`,
+                type: 'order',
+                link: '/profile'
+              });
+
               // Sync placed order into client order service so details load immediately
               const mapped = this.orderService.mapBackendAdminOrder({
                 ...res.order,
@@ -264,6 +273,12 @@ export class Checkout implements OnInit {
         next: (created) => {
           this.isSubmitting.set(false);
           this.orderSuccessMessage.set(`Order #${created.orderNumber} placed successfully!`);
+          this.notificationService.addNotification({
+            title: `Order #${created.orderNumber} Placed Successfully!`,
+            message: `Your grocery order #${created.orderNumber} is placed and will be delivered within 30-45 minutes.`,
+            type: 'order',
+            link: '/profile'
+          });
           this.cartService.clearCart();
           setTimeout(() => {
             this.router.navigate(['/order-success', created.id]);
