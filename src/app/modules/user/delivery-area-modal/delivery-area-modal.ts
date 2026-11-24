@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DeliveryAreaService, DeliveryCheckResult } from '../../../core/services/delivery-area.service';
@@ -22,7 +22,12 @@ export class DeliveryAreaModal {
   readonly currentStep = signal<'prompt' | 'checking' | 'result' | 'fallback_pincode'>('prompt');
   readonly checkResult = signal<DeliveryCheckResult | null>(null);
   readonly errorMessage = signal<string | null>(null);
-  readonly manualPincode = signal<string>('682030');
+  readonly manualPincode = signal<string>('');
+  readonly isSubmitting = signal<boolean>(false);
+
+  // Dynamic store name and service radius
+  readonly storeName = computed(() => this.checkResult()?.storeName || this.settings()?.shopName || 'Ebuyzy Store');
+  readonly storeRadius = computed(() => this.checkResult()?.serviceRadiusKm || this.settings()?.deliveryRadiusKm || 5);
 
   closeModal(): void {
     this.deliveryService.closeModal();
@@ -31,7 +36,7 @@ export class DeliveryAreaModal {
     this.errorMessage.set(null);
   }
 
-  // 1. Allow GPS & Check Store Radius
+  // 1. Allow GPS & Check Store Availability via Backend API
   requestGpsAndCheck(): void {
     this.errorMessage.set(null);
 
@@ -46,30 +51,28 @@ export class DeliveryAreaModal {
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
-        console.log('GPS Coordinates:', { latitude, longitude });
 
-        // Query backend getStoreDetails API with GPS coordinates
-        this.settingsService.getStoreDetails(latitude, longitude).subscribe({
-          next: (storeRes) => {
-            console.log('Backend /api/getStoreDetails response:', storeRes);
+        // Verify with live backend /api/getStoreDetails API
+        this.deliveryService.checkAvailabilityWithApi(latitude, longitude).subscribe({
+          next: (result) => {
+            this.checkResult.set(result);
+            this.currentStep.set('result');
           },
           error: (err) => {
-            console.error('getStoreDetails API error:', err);
+            console.error('Delivery check error:', err);
+            this.errorMessage.set('Could not verify delivery area at this time. Please try entering your pincode.');
+            this.currentStep.set('fallback_pincode');
           }
         });
-
-        const result = this.deliveryService.checkCoordinates(latitude, longitude);
-        this.checkResult.set(result);
-        this.currentStep.set('result');
       },
       (error) => {
         let msg = 'Location access was not granted.';
         if (error.code === error.PERMISSION_DENIED) {
-          msg = 'Location permission was denied. You can check with your Pincode or use Kakkanad store location.';
+          msg = 'Location permission was denied. You can check delivery availability by entering your pincode.';
         } else if (error.code === error.POSITION_UNAVAILABLE) {
           msg = 'Location information is currently unavailable from your device.';
         } else if (error.code === error.TIMEOUT) {
-          msg = 'Location request timed out. Please try again.';
+          msg = 'Location request timed out. Please try again or enter your pincode.';
         }
         this.errorMessage.set(msg);
         this.currentStep.set('fallback_pincode');
@@ -78,28 +81,28 @@ export class DeliveryAreaModal {
     );
   }
 
-  // Quick Demo Simulator (for testing within store radius)
-  simulateKakkanadLocation(): void {
-    this.currentStep.set('checking');
-    setTimeout(() => {
-      // Simulate coordinates 1.8 km from Kakkanad store
-      const result = this.deliveryService.checkCoordinates(10.0125, 76.3562);
-      this.checkResult.set(result);
-      this.currentStep.set('result');
-    }, 400);
-  }
-
-  // Fallback Manual Pincode Check
+  // Fallback Manual Pincode Check via API
   checkManualPincode(): void {
     const pin = this.manualPincode().trim();
-    if (!pin) return;
+    if (!pin || pin.length < 6) {
+      this.errorMessage.set('Please enter a valid 6-digit Indian postal pincode.');
+      return;
+    }
 
     this.currentStep.set('checking');
-    setTimeout(() => {
-      const result = this.deliveryService.checkLocation(pin);
-      this.checkResult.set(result);
-      this.currentStep.set('result');
-    }, 300);
+    this.errorMessage.set(null);
+
+    this.deliveryService.checkPincodeAvailability(pin).subscribe({
+      next: (result) => {
+        this.checkResult.set(result);
+        this.currentStep.set('result');
+      },
+      error: (err) => {
+        console.error('Pincode check error:', err);
+        this.errorMessage.set('Could not check delivery for this pincode. Please try again.');
+        this.currentStep.set('fallback_pincode');
+      }
+    });
   }
 
   confirmAndContinue(): void {
@@ -110,7 +113,8 @@ export class DeliveryAreaModal {
         pincode: res.pincode,
         distanceKm: res.distanceKm,
         isDeliverable: true,
-        verified: true
+        verified: true,
+        storeName: res.storeName
       });
     }
     this.closeModal();

@@ -34,10 +34,10 @@
         <div
           class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-700 dark:text-gray-300">
           <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-          <span>Kakkanad Store &bull; {{ settings()?.deliveryRadiusKm ?? 4.5 }} km radius</span>
+          <span>{{ storeName() }} &bull; {{ storeRadius() }} km radius</span>
         </div>
 
-        <!-- Big Allow GPS Button -->
+        <!-- Big Allow GPS Button & Pincode fallback -->
         <div class="pt-2 space-y-2">
           <button type="button" (click)="requestGpsAndCheck()"
             class="w-full py-3 px-5 rounded-xl bg-gradient-to-r from-[#FF9500] to-[#FF4D00] hover:from-[#e08500] hover:to-[#e04000] text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]">
@@ -45,10 +45,9 @@
             <span>Allow GPS &amp; Check Location</span>
           </button>
 
-          <!-- Kakkanad Simulation (for easy demo & testing) -->
-          <button type="button" (click)="simulateKakkanadLocation()"
-            class="w-full py-2 px-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-[#FF9500] text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white text-xs font-semibold transition-colors">
-            Or test with Kakkanad Hub (1.8 km)
+          <button type="button" (click)="currentStep.set('fallback_pincode')"
+            class="w-full py-2.5 px-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-[#FF9500] text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white text-xs font-semibold transition-colors">
+            Or check using Pincode
           </button>
         </div>
 
@@ -73,9 +72,9 @@
         </div>
 
         <div class="space-y-1">
-          <h3 class="text-lg font-bold text-gray-900 dark:text-white">Checking Your Location...</h3>
+          <h3 class="text-lg font-bold text-gray-900 dark:text-white">Checking Store Availability...</h3>
           <p class="text-xs text-gray-500 dark:text-gray-400">
-            Calculating distance from our Kakkanad store hub...
+            Verifying delivery coverage from {{ storeName() }}...
           </p>
         </div>
       </div>
@@ -113,13 +112,13 @@
           <div class="flex items-center justify-between">
             <span class="text-gray-600 dark:text-gray-400">Service radius:</span>
             <span class="font-bold text-gray-800 dark:text-gray-200">
-              Within {{ settings()?.deliveryRadiusKm ?? 4.5 }} km
+              Within {{ result.serviceRadiusKm || storeRadius() }} km
             </span>
           </div>
           <div class="flex items-center justify-between pt-1 border-t border-emerald-200/60 dark:border-emerald-800">
             <span class="text-gray-600 dark:text-gray-400">Delivery speed:</span>
             <span class="font-bold text-emerald-800 dark:text-emerald-300">
-              ⚡ 30-45 mins express
+              ⚡ {{ result.deliveryTime || '20-30 mins express' }}
             </span>
           </div>
         </div>
@@ -140,13 +139,17 @@
             Delivery Not Available
           </h2>
           <p class="text-xs text-gray-500 dark:text-gray-400">
+            @if (result.distanceKm > 0) {
             Your location is approximately <strong>{{ result.distanceKm }} km away</strong>.
+            } @else {
+            {{ result.message || 'We do not currently deliver to this location.' }}
+            }
           </p>
         </div>
 
         <div
           class="p-3.5 rounded-xl bg-rose-50/70 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-xs text-rose-800 dark:text-rose-300">
-          We currently deliver only within <strong>{{ settings()?.deliveryRadiusKm ?? 4.5 }} km</strong> of our Kakkanad store hub.
+          We currently deliver only within <strong>{{ result.serviceRadiusKm || storeRadius() }} km</strong> of {{ result.storeName || storeName() }}.
         </div>
 
         <div class="pt-2 space-y-2">
@@ -154,9 +157,9 @@
             class="w-full py-2.5 px-4 rounded-xl bg-black text-[#FFD600] font-bold text-xs hover:bg-gray-800 transition-colors">
             Browse Store Anyway
           </button>
-          <button type="button" (click)="simulateKakkanadLocation()"
+          <button type="button" (click)="retry()"
             class="w-full py-2 px-4 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-xs font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-            Test with Kakkanad Hub (Demo)
+            Check Another Location or Pincode
           </button>
         </div>
         }
@@ -175,19 +178,19 @@
         <div class="space-y-1">
           <h3 class="text-lg font-bold text-gray-900 dark:text-white">Location Access Needed</h3>
           <p class="text-xs text-gray-500 dark:text-gray-400">
-            {{ errorMessage() || 'GPS location was unavailable.' }}
+            {{ errorMessage() || 'GPS location was unavailable. Please enter your 6-digit delivery pincode.' }}
           </p>
         </div>
 
         <!-- Quick Pincode Entry -->
         <div class="pt-1 space-y-2 text-left">
           <label for="manual-pincode" class="block text-xs font-semibold text-gray-700 dark:text-gray-300">
-            Enter Kakkanad Pincode:
+            Enter Delivery Pincode:
           </label>
           <div class="flex gap-2">
             <input id="manual-pincode" type="text" [ngModel]="manualPincode()"
               (ngModelChange)="manualPincode.set($event)" maxlength="6"
-              placeholder="e.g. 682030"
+              placeholder="e.g. 673602"
               class="flex-1 px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs font-mono font-bold text-gray-900 dark:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]" />
             <button type="button" (click)="checkManualPincode()"
               class="px-4 py-2 rounded-xl bg-gradient-to-r from-[#FF9500] to-[#FF4D00] text-white text-xs font-bold shrink-0">
@@ -197,11 +200,7 @@
         </div>
 
         <div class="pt-2 space-y-2">
-          <button type="button" (click)="simulateKakkanadLocation()"
-            class="w-full py-2 px-3 rounded-xl border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:border-[#FF9500]">
-            Use Kakkanad Hub (682030)
-          </button>
-          <button type="button" (click)="retry()"
+          <button type="button" (click)="requestGpsAndCheck()"
             class="text-xs text-[#FF9500] hover:underline font-bold">
             Try GPS Again &rarr;
           </button>
