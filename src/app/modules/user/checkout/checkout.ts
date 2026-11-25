@@ -254,7 +254,7 @@ export class Checkout implements OnInit {
   /**
    * Applies detected or selected coordinates to the checkout form and state
    */
-  applyCoordinates(latitude: number, longitude: number, localityHint?: string): void {
+  applyCoordinates(latitude: number, longitude: number): void {
     this.isLocating.set(false);
     this.showGpsPrompt.set(false);
     this.locationError.set(null);
@@ -269,13 +269,6 @@ export class Checkout implements OnInit {
     });
     this.checkoutForm.get('gpsLocation')?.markAsTouched();
     this.checkoutForm.get('gpsLocation')?.updateValueAndValidity();
-
-    if (localityHint && !this.checkoutForm.get('landmark')?.value) {
-      this.checkoutForm.patchValue({ landmark: localityHint });
-    }
-
-    // Try reverse geocoding to suggest area name/landmark
-    this.reverseGeocode(lat, lng);
 
     // Sync with delivery area service if available
     if (this.deliveryService.selectedLocation()) {
@@ -306,7 +299,7 @@ export class Checkout implements OnInit {
       })
       .then((data) => {
         if (data && data.success && data.latitude != null && data.longitude != null) {
-          this.applyCoordinates(Number(data.latitude), Number(data.longitude), data.city || data.region);
+          this.applyCoordinates(Number(data.latitude), Number(data.longitude));
         } else {
           throw new Error('Invalid IP payload');
         }
@@ -325,7 +318,7 @@ export class Checkout implements OnInit {
   useSavedVerifiedLocation(): void {
     const loc = this.deliveryService.selectedLocation();
     if (loc && loc.latitude != null && loc.longitude != null) {
-      this.applyCoordinates(loc.latitude, loc.longitude, loc.locality);
+      this.applyCoordinates(loc.latitude, loc.longitude);
     }
   }
 
@@ -339,38 +332,6 @@ export class Checkout implements OnInit {
     this.gpsPromptMessage.set(message);
     this.showGpsPrompt.set(true);
     this.locationError.set(message);
-  }
-
-  private reverseGeocode(lat: number, lng: number): void {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 3500);
-
-    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`, {
-      signal: controller.signal
-    })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        clearTimeout(timeout);
-        if (data && data.address) {
-          const area =
-            data.address.suburb ||
-            data.address.neighbourhood ||
-            data.address.residential ||
-            data.address.city_district ||
-            data.address.town ||
-            data.address.city ||
-            '';
-          if (area && !this.checkoutForm.get('landmark')?.value) {
-            this.checkoutForm.patchValue({ landmark: area });
-          }
-          if (data.display_name && !this.checkoutForm.get('address')?.value) {
-            this.checkoutForm.patchValue({ address: data.display_name });
-          }
-        }
-      })
-      .catch(() => {
-        // Silently ignore reverse geocode error
-      });
   }
 
   placeOrder(): void {
@@ -396,6 +357,16 @@ export class Checkout implements OnInit {
 
     // If authenticated, place real order via backend POST /api/orders/place
     if (this.authService.currentUser()?.id || this.authService.getToken()) {
+      let latVal: number | string | null = this.locationDetected()?.lat ?? null;
+      let lngVal: number | string | null = this.locationDetected()?.lng ?? null;
+      if ((latVal == null || lngVal == null) && formVal.gpsLocation) {
+        const match = formVal.gpsLocation.match(/([0-9.]+)[°\s]*[NS]?[,\s]+([0-9.]+)[°\s]*[EW]?/i);
+        if (match) {
+          latVal = match[1];
+          lngVal = match[2];
+        }
+      }
+
       // Save address & GPS to backend database so it's remembered for future orders
       this.authService
         .saveAddressApi({
@@ -414,7 +385,11 @@ export class Checkout implements OnInit {
           customerName: formVal.name,
           customerMobile: formVal.phone,
           deliveryAddress: fullAddress,
-          note: formVal.notes || undefined
+          note: formVal.notes || undefined,
+          latitude: latVal,
+          longitude: lngVal,
+          lattitude: latVal,
+          logitude: lngVal
         })
         .subscribe({
           next: (res) => {

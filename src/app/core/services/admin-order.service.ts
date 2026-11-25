@@ -224,6 +224,10 @@ export class AdminOrderService {
     customerMobile?: string | null;
     deliveryAddress?: string | null;
     note?: string | null;
+    latitude?: number | string | null;
+    longitude?: number | string | null;
+    lattitude?: number | string | null;
+    logitude?: number | string | null;
   }): Observable<{ success: boolean; order?: any; items?: any[]; message?: string }> {
     const token = this.authService.getToken();
     const headers = token ? new HttpHeaders({ Authorization: `Bearer ${token}` }) : undefined;
