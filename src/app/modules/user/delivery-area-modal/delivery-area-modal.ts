@@ -22,6 +22,7 @@ export class DeliveryAreaModal {
   readonly currentStep = signal<'prompt' | 'checking' | 'result' | 'error'>('prompt');
   readonly checkResult = signal<DeliveryCheckResult | null>(null);
   readonly errorMessage = signal<string | null>(null);
+  readonly detectedCoords = signal<{ lat: number; lng: number } | null>(null);
 
   // Dynamic store name and service radius from live API result
   readonly storeName = computed(() => this.checkResult()?.storeName || '');
@@ -107,6 +108,7 @@ export class DeliveryAreaModal {
   // Sends coordinates directly to backend /api/getStoreDetails API
   verifyWithBackend(latitude: number, longitude: number): void {
     console.log('[DeliveryModal] Calling backend /api/getStoreDetails with coordinates:', { latitude, longitude });
+    this.detectedCoords.set({ lat: latitude, lng: longitude });
 
     this.deliveryService.checkAvailabilityWithApi(latitude, longitude).subscribe({
       next: (result) => {
@@ -124,6 +126,7 @@ export class DeliveryAreaModal {
 
   confirmAndContinue(): void {
     const res = this.checkResult();
+    const coords = this.detectedCoords();
     if (res && res.isDeliverable) {
       this.deliveryService.confirmLocation({
         locality: res.storeAddress || res.locality || res.storeName || 'My Location',
@@ -131,6 +134,8 @@ export class DeliveryAreaModal {
         distanceKm: res.distanceKm,
         isDeliverable: true,
         verified: true,
+        latitude: coords?.lat,
+        longitude: coords?.lng,
         storeName: res.storeName
       });
     }

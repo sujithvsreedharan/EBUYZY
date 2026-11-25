@@ -22,11 +22,13 @@
         </div>
 
         @if (orderSuccessMessage()) {
-        <div class="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-200 text-sm font-bold flex items-center gap-3 animate-fadeIn">
+        <div
+          class="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-200 text-sm font-bold flex items-center gap-3 animate-fadeIn">
           <span class="text-2xl">🎉</span>
           <div>
             <p>{{ orderSuccessMessage() }}</p>
-            <p class="text-xs font-normal opacity-90 mt-0.5">Your grocery order has been successfully saved in our system. Redirecting you to confirmation...</p>
+            <p class="text-xs font-normal opacity-90 mt-0.5">Your grocery order has been successfully saved in our
+              system. Redirecting you to confirmation...</p>
           </div>
         </div>
         }
@@ -74,11 +76,19 @@
               <!-- Add location button -->
               <button type="button" (click)="detectLocation()" [disabled]="isLocating()"
                 class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#FFD600]/25 hover:bg-[#FFD600]/40 text-gray-900 dark:text-yellow-300 border border-[#FFD600]/50 text-xs font-bold transition-all cursor-pointer">
+                @if (isLocating()) {
+                <svg class="animate-spin w-3.5 h-3.5 text-[#FF9500]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                </svg>
+                <span>Detecting GPS...</span>
+                } @else {
                 <svg class="w-3.5 h-3.5 text-[#FF9500]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                 </svg>
-                <span>{{ isLocating() ? 'Adding location...' : 'Add location' }}</span>
+                <span>{{ locationDetected() ? 'Update location' : 'Add location' }}</span>
+                }
               </button>
             </div>
 
@@ -95,11 +105,58 @@
               }
             </div>
 
-            @if (checkoutForm.get('gpsLocation')?.invalid && checkoutForm.get('gpsLocation')?.touched) {
-            <p class="text-xs text-rose-600 dark:text-rose-400 mt-1">Geo location is mandatory. Please click "Add location" or enter your delivery location.</p>
+            @if (checkoutForm.get('gpsLocation')?.invalid && checkoutForm.get('gpsLocation')?.touched && !showGpsPrompt()) {
+            <p class="text-xs text-rose-600 dark:text-rose-400 mt-1">Geo location is mandatory. Please click "Add
+              location" or enter your delivery location.</p>
             }
 
-            @if (locationError()) {
+            <!-- Enhanced GPS Enable / Permission Guidance for Mobile Phones -->
+            @if (showGpsPrompt()) {
+            <div class="mt-2.5 p-3 rounded-xl border border-amber-300 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 shadow-xs">
+              <div class="flex items-start gap-2.5">
+                <div class="w-7 h-7 rounded-lg bg-amber-200 dark:bg-amber-800/60 flex items-center justify-center shrink-0 mt-0.5">
+                  <svg class="w-4 h-4 text-amber-700 dark:text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between">
+                    <h4 class="text-xs font-bold text-amber-900 dark:text-amber-200">
+                      {{ gpsPromptTitle() }}
+                    </h4>
+                    <button type="button" (click)="dismissGpsPrompt()" class="text-amber-700 dark:text-amber-400 hover:text-amber-900 p-0.5 text-xs font-bold cursor-pointer">✕</button>
+                  </div>
+                  <p class="text-[11px] leading-relaxed text-amber-800 dark:text-amber-300 mt-1">
+                    {{ gpsPromptMessage() }}
+                  </p>
+
+                  <div class="flex flex-wrap items-center gap-2 mt-2.5">
+                    <button type="button" (click)="detectLocation()" [disabled]="isLocating()"
+                      class="px-2.5 py-1 rounded-lg bg-[#FFD600] hover:bg-yellow-400 text-gray-900 text-xs font-bold shadow-xs transition-all cursor-pointer inline-flex items-center gap-1">
+                      <svg class="w-3.5 h-3.5 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      <span>Try Again</span>
+                    </button>
+
+                    @if (hasVerifiedStoreLocation()) {
+                    <button type="button" (click)="useSavedVerifiedLocation()"
+                      class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition-all cursor-pointer">
+                      Use Store Area Location
+                    </button>
+                    }
+
+                    <button type="button" (click)="useNetworkLocation()" [disabled]="isLocating()"
+                      class="px-2.5 py-1 rounded-lg bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 text-xs font-semibold hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-all cursor-pointer">
+                      Use Network Location
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            }
+
+            @if (!showGpsPrompt() && locationError()) {
             <p class="text-xs text-amber-700 dark:text-amber-400 mt-1">{{ locationError() }}</p>
             }
           </div>
@@ -110,9 +167,9 @@
               <label for="custAddress" class="block text-xs font-bold text-gray-700 dark:text-gray-300">
                 Address <span class="text-rose-600">*</span>
               </label>
-              <span class="text-[11px] text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-800/60 font-medium">
+              <!-- <span class="text-[11px] text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-800/60 font-medium">
                 Type address to order for another person
-              </span>
+              </span> -->
             </div>
 
             <textarea id="custAddress" rows="3" formControlName="address"

@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -32,8 +32,31 @@ export class Checkout implements OnInit {
   readonly isLocating = signal<boolean>(false);
   readonly locationDetected = signal<{ lat: number; lng: number } | null>(null);
   readonly locationError = signal<string | null>(null);
+  readonly showGpsPrompt = signal<boolean>(false);
+  readonly gpsPromptType = signal<'disabled' | 'denied' | 'insecure' | 'timeout' | null>(null);
+  readonly gpsPromptMessage = signal<string>('');
   readonly isSubmitting = signal<boolean>(false);
   readonly orderSuccessMessage = signal<string | null>(null);
+
+  readonly hasVerifiedStoreLocation = computed(() => {
+    const loc = this.deliveryService.selectedLocation();
+    return loc?.latitude != null && loc?.longitude != null;
+  });
+
+  readonly gpsPromptTitle = computed(() => {
+    switch (this.gpsPromptType()) {
+      case 'disabled':
+        return 'Device Location / GPS is Turned Off';
+      case 'denied':
+        return 'Location Permission Required';
+      case 'insecure':
+        return 'Mobile Network Location Notice';
+      case 'timeout':
+        return 'Location Request Timed Out';
+      default:
+        return 'GPS Location Issue';
+    }
+  });
 
   readonly checkoutForm: FormGroup = this.fb.group({
     name: ['', [Validators.required, Validators.minLength(2)]],
@@ -122,41 +145,232 @@ export class Checkout implements OnInit {
               phone: profile.mobile || profile.phone || this.checkoutForm.get('phone')?.value || ''
             });
           }
+
+          // 5. If GPS is still empty, check if verified location exists from delivery area check
+          if (!this.checkoutForm.get('gpsLocation')?.value) {
+            const verifiedLoc = this.deliveryService.selectedLocation();
+            if (verifiedLoc && verifiedLoc.latitude != null && verifiedLoc.longitude != null) {
+              const lat = Number(verifiedLoc.latitude.toFixed(5));
+              const lng = Number(verifiedLoc.longitude.toFixed(5));
+              if (!this.locationDetected()) {
+                this.locationDetected.set({ lat, lng });
+              }
+              this.checkoutForm.patchValue({
+                gpsLocation: `${lat}° N, ${lng}° E`
+              });
+            }
+          }
         }
       },
-      error: (err) => console.warn('Could not fetch saved address from backend:', err)
+      error: (err) => {
+        console.warn('Could not fetch saved address from backend:', err);
+        // Fallback to verified delivery location if available
+        const verifiedLoc = this.deliveryService.selectedLocation();
+        if (verifiedLoc && verifiedLoc.latitude != null && verifiedLoc.longitude != null && !this.checkoutForm.get('gpsLocation')?.value) {
+          const lat = Number(verifiedLoc.latitude.toFixed(5));
+          const lng = Number(verifiedLoc.longitude.toFixed(5));
+          this.locationDetected.set({ lat, lng });
+          this.checkoutForm.patchValue({
+            gpsLocation: `${lat}° N, ${lng}° E`
+          });
+        }
+      }
     });
   }
 
+  /**
+   * Detects location via device GPS.
+   * If GPS is disabled on the phone or permission denied, asks user to enable it
+   * with clear instructions and retry / network fallback options.
+   */
   detectLocation(): void {
-    if (!('geolocation' in navigator)) {
-      this.locationError.set('Geolocation is not supported by your browser.');
+    this.locationError.set(null);
+    this.showGpsPrompt.set(false);
+    this.gpsPromptType.set(null);
+
+    // 1. Check if browser has geolocation API
+    if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
+      if (typeof window !== 'undefined' && !window.isSecureContext) {
+        this.promptGpsIssue(
+          'insecure',
+          'Mobile browsers require HTTPS for direct GPS on local network IPs. Attempting network location fallback...'
+        );
+        this.useNetworkLocation(false);
+      } else {
+        this.promptGpsIssue('disabled', 'Geolocation is not supported by your browser.');
+      }
       return;
     }
 
     this.isLocating.set(true);
-    this.locationError.set(null);
 
+    // 2. Request current position with balanced mobile options
+    // enableHighAccuracy: false ensures fast cell/Wi-Fi/fused location without waiting for satellite lock indoors
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        this.isLocating.set(false);
-        const coords = {
-          lat: Number(pos.coords.latitude.toFixed(4)),
-          lng: Number(pos.coords.longitude.toFixed(4))
-        };
-        this.locationDetected.set(coords);
-        this.checkoutForm.patchValue({
-          gpsLocation: `${coords.lat}° N, ${coords.lng}° E`
-        });
-        this.checkoutForm.get('gpsLocation')?.markAsTouched();
-        this.checkoutForm.get('gpsLocation')?.updateValueAndValidity();
+        const { latitude, longitude } = pos.coords;
+        this.applyCoordinates(latitude, longitude);
       },
-      () => {
-        this.isLocating.set(false);
-        this.locationError.set('Could not fetch GPS location. Please allow browser location access or type your location manually.');
+      (error) => {
+        console.warn('Geolocation request failed:', error.code, error.message);
+
+        if (error.code === error.PERMISSION_DENIED) {
+          // If accessing via HTTP LAN IP on mobile, it is blocked by insecure origin
+          if (typeof window !== 'undefined' && !window.isSecureContext) {
+            this.promptGpsIssue(
+              'insecure',
+              'Mobile browsers require HTTPS for GPS on network IPs. You can use network location or enable "Insecure origins treated as secure" in chrome://flags.'
+            );
+            this.useNetworkLocation(true);
+          } else {
+            this.promptGpsIssue(
+              'denied',
+              'Location permission was denied. Please allow location permissions in your mobile browser settings (tap the lock icon 🔒 beside the URL bar), then tap "Try Again".'
+            );
+          }
+        } else if (error.code === error.POSITION_UNAVAILABLE) {
+          // Device GPS hardware/toggle is turned off in quick settings
+          this.promptGpsIssue(
+            'disabled',
+            'GPS / Location is turned OFF on your phone. Please swipe down your quick settings, turn ON "Location", and tap "Try Again".'
+          );
+        } else if (error.code === error.TIMEOUT) {
+          this.promptGpsIssue(
+            'timeout',
+            'GPS location request timed out. Please ensure Location is enabled with clear reception, or tap "Use Network Location".'
+          );
+          this.useNetworkLocation(true);
+        } else {
+          this.promptGpsIssue(
+            'disabled',
+            'Could not retrieve GPS location. Please turn on Location on your phone and tap "Try Again".'
+          );
+        }
       },
-      { timeout: 10000, enableHighAccuracy: true }
+      { timeout: 12000, enableHighAccuracy: false, maximumAge: 30000 }
     );
+  }
+
+  /**
+   * Applies detected or selected coordinates to the checkout form and state
+   */
+  applyCoordinates(latitude: number, longitude: number, localityHint?: string): void {
+    this.isLocating.set(false);
+    this.showGpsPrompt.set(false);
+    this.locationError.set(null);
+
+    const lat = Number(latitude.toFixed(5));
+    const lng = Number(longitude.toFixed(5));
+    this.locationDetected.set({ lat, lng });
+
+    const formattedGps = `${lat}° N, ${lng}° E`;
+    this.checkoutForm.patchValue({
+      gpsLocation: formattedGps
+    });
+    this.checkoutForm.get('gpsLocation')?.markAsTouched();
+    this.checkoutForm.get('gpsLocation')?.updateValueAndValidity();
+
+    if (localityHint && !this.checkoutForm.get('landmark')?.value) {
+      this.checkoutForm.patchValue({ landmark: localityHint });
+    }
+
+    // Try reverse geocoding to suggest area name/landmark
+    this.reverseGeocode(lat, lng);
+
+    // Sync with delivery area service if available
+    if (this.deliveryService.selectedLocation()) {
+      const current = this.deliveryService.selectedLocation()!;
+      this.deliveryService.confirmLocation({
+        ...current,
+        latitude: lat,
+        longitude: lng
+      });
+    }
+  }
+
+  /**
+   * Fallback: fetches network IP coordinates when GPS is disabled or blocked on mobile HTTP
+   */
+  useNetworkLocation(silent = false): void {
+    if (!silent) {
+      this.isLocating.set(true);
+    }
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
+
+    fetch('https://ipwho.is/', { signal: controller.signal })
+      .then((res) => {
+        clearTimeout(timeoutId);
+        if (!res.ok) throw new Error('Network IP location failed');
+        return res.json();
+      })
+      .then((data) => {
+        if (data && data.success && data.latitude != null && data.longitude != null) {
+          this.applyCoordinates(Number(data.latitude), Number(data.longitude), data.city || data.region);
+        } else {
+          throw new Error('Invalid IP payload');
+        }
+      })
+      .catch(() => {
+        this.isLocating.set(false);
+        if (!silent) {
+          this.locationError.set('Could not detect location via network. Please turn on phone GPS or enter address.');
+        }
+      });
+  }
+
+  /**
+   * Use verified location from previous store check
+   */
+  useSavedVerifiedLocation(): void {
+    const loc = this.deliveryService.selectedLocation();
+    if (loc && loc.latitude != null && loc.longitude != null) {
+      this.applyCoordinates(loc.latitude, loc.longitude, loc.locality);
+    }
+  }
+
+  dismissGpsPrompt(): void {
+    this.showGpsPrompt.set(false);
+  }
+
+  private promptGpsIssue(type: 'disabled' | 'denied' | 'insecure' | 'timeout', message: string): void {
+    this.isLocating.set(false);
+    this.gpsPromptType.set(type);
+    this.gpsPromptMessage.set(message);
+    this.showGpsPrompt.set(true);
+    this.locationError.set(message);
+  }
+
+  private reverseGeocode(lat: number, lng: number): void {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3500);
+
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`, {
+      signal: controller.signal
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        clearTimeout(timeout);
+        if (data && data.address) {
+          const area =
+            data.address.suburb ||
+            data.address.neighbourhood ||
+            data.address.residential ||
+            data.address.city_district ||
+            data.address.town ||
+            data.address.city ||
+            '';
+          if (area && !this.checkoutForm.get('landmark')?.value) {
+            this.checkoutForm.patchValue({ landmark: area });
+          }
+          if (data.display_name && !this.checkoutForm.get('address')?.value) {
+            this.checkoutForm.patchValue({ address: data.display_name });
+          }
+        }
+      })
+      .catch(() => {
+        // Silently ignore reverse geocode error
+      });
   }
 
   placeOrder(): void {
