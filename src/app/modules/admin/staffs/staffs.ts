@@ -139,8 +139,17 @@ export class Staffs implements OnInit {
           }
           // 3. Staff roster
           if (Array.isArray(res.staff)) {
+            // Deduplicate staff records by slno
+            const uniqueStaffMap = new Map<number, StaffApiItem>();
+            for (const item of res.staff) {
+              if (item && item.slno != null && !uniqueStaffMap.has(item.slno)) {
+                uniqueStaffMap.set(item.slno, item);
+              }
+            }
+            const uniqueStaff = Array.from(uniqueStaffMap.values());
+
             const existingMap = new Map(this.staffService.staffs().map((s) => [s.id, s]));
-            const mapped: StaffRecord[] = res.staff.map((item) => {
+            const mapped: StaffRecord[] = uniqueStaff.map((item) => {
               const isDelivery = String(item.role || '').toUpperCase().includes('DELIVERY');
               const existing = existingMap.get(String(item.slno));
               return {
@@ -149,7 +158,6 @@ export class Staffs implements OnInit {
                 name: item.name,
                 email: item.email || '',
                 phone: item.phone || '',
-                password: existing?.password || (isDelivery ? 'delivery123' : 'order123'),
                 roleTitle: item.desc || (isDelivery ? 'Delivery Partner' : 'Sub-Admin'),
                 permissions: existing?.permissions || (isDelivery ? ['assigned_orders'] : ['orders', 'dashboard']),
                 vehicleType: item.vehicleType || existing?.vehicleType,
@@ -196,15 +204,18 @@ export class Staffs implements OnInit {
     const isDelivery = type === 'delivery_person';
     const matchingRoleId = isDelivery ? 1001 : 1002;
 
+    this.staffForm.get('password')?.setValidators([Validators.required, Validators.minLength(8)]);
+    this.staffForm.get('password')?.updateValueAndValidity();
+
     this.staffForm.reset({
       roleId: matchingRoleId,
       name: '',
       email: '',
       phone: '',
-      password: isDelivery ? 'delivery123' : 'order123',
+      password: '',
       roleTitle: isDelivery ? 'Kakkanad Express Delivery Partner' : 'Order Dispatch Executive',
       vehicleType: 'Honda Activa (Scooter)',
-      vehicleNumber: 'KL-07-CD-4521',
+      vehicleNumber: '',
       zone: 'Kakkanad & Infopark'
     });
 
@@ -222,14 +233,12 @@ export class Staffs implements OnInit {
 
     if (isDelivery && (!currentTitle || currentTitle === 'Order Dispatch Executive')) {
       this.staffForm.patchValue({
-        roleTitle: 'Kakkanad Express Delivery Partner',
-        password: this.staffForm.get('password')?.value || 'delivery123'
+        roleTitle: 'Kakkanad Express Delivery Partner'
       });
       this.selectedPermissions.set(['assigned_orders']);
     } else if (!isDelivery && (!currentTitle || currentTitle.includes('Delivery Partner'))) {
       this.staffForm.patchValue({
-        roleTitle: 'Order Dispatch Executive',
-        password: this.staffForm.get('password')?.value || 'order123'
+        roleTitle: 'Order Dispatch Executive'
       });
       this.selectedPermissions.set(['orders', 'dashboard']);
     }
@@ -243,12 +252,15 @@ export class Staffs implements OnInit {
     const isDelivery = staff.type === 'delivery_person';
     const roleId = isDelivery ? 1001 : 1002;
 
+    this.staffForm.get('password')?.clearValidators();
+    this.staffForm.get('password')?.updateValueAndValidity();
+
     this.staffForm.patchValue({
       roleId,
       name: staff.name,
       email: staff.email,
       phone: staff.phone,
-      password: staff.password || (isDelivery ? 'delivery123' : 'order123'),
+      password: '',
       roleTitle: staff.roleTitle,
       vehicleType: staff.vehicleType || '',
       vehicleNumber: staff.vehicleNumber || '',
@@ -337,7 +349,6 @@ export class Staffs implements OnInit {
         name: formValues.name!,
         email: formValues.email!,
         phone: cleanPhone,
-        password: formValues.password!,
         roleTitle: formValues.roleTitle!,
         permissions: perms as AdminPagePermission[],
         vehicleType: formValues.vehicleType || undefined,
@@ -405,7 +416,7 @@ export class Staffs implements OnInit {
 
   copyCredentials(staff: StaffRecord): void {
     const roleLabel = staff.type === 'delivery_person' ? 'EBUYZY Delivery Partner Login' : 'EBUYZY Sub-Admin Login';
-    const creds = `${roleLabel}:\nUsername/Email: ${staff.email}\nPhone: ${staff.phone}\nPassword: ${staff.password || 'delivery123'}\nPortal: ${window.location.origin}/admin/login`;
+    const creds = `${roleLabel}:\nUsername/Email: ${staff.email}\nPhone: ${staff.phone}\nPortal: ${window.location.origin}/admin/login\nPassword: (set when account was created)`;
     navigator.clipboard.writeText(creds).then(() => {
       this.copiedStaffId.set(staff.id);
       setTimeout(() => this.copiedStaffId.set(null), 2500);

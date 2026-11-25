@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, effect, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, BehaviorSubject, of, combineLatest } from 'rxjs';
 import { delay, map, tap } from 'rxjs/operators';
@@ -33,35 +33,31 @@ export class AdminOrderService {
   private readonly ordersSubject = new BehaviorSubject<Order[]>(this.loadFromStorage());
 
   constructor() {
-    this.clearAllDemoOrders();
+    this.clearLegacyOrderStorage();
+    effect(() => {
+      const user = this.authService.currentUser();
+      if (!user) {
+        this.ordersSubject.next([]);
+      }
+    });
     if (this.authService.isAuthenticated()) {
       this.fetchAdminOrders().subscribe({ error: () => { } });
     }
   }
 
-  private loadFromStorage(): Order[] {
+  private clearLegacyOrderStorage(): void {
     try {
-      const data = localStorage.getItem(this.STORAGE_KEY);
-      if (data) {
-        const parsed = JSON.parse(data);
-        if (Array.isArray(parsed)) {
-          const cleanOrders = parsed.filter((o: any) => !String(o.id || '').startsWith('ord-80'));
-          localStorage.setItem(this.STORAGE_KEY, JSON.stringify(cleanOrders));
-          return cleanOrders;
-        }
-      }
+      localStorage.removeItem(this.STORAGE_KEY);
     } catch {
-      // Fallback
+      // Ignore
     }
+  }
+
+  private loadFromStorage(): Order[] {
     return [];
   }
 
   private persist(orders: Order[]): void {
-    try {
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(orders));
-    } catch {
-      // Ignore
-    }
     this.ordersSubject.next(orders);
   }
 

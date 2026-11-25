@@ -405,12 +405,6 @@ export class AuthService {
 
     try {
       localStorage.setItem(this.USER_KEY, JSON.stringify(updatedUser));
-      const registry = this.getStoredUsers();
-      const idx = registry.findIndex((u) => u.id === current.id || u.email === current.email);
-      if (idx !== -1) {
-        registry[idx] = updatedUser;
-        localStorage.setItem(this.CUSTOMERS_REGISTRY_KEY, JSON.stringify(registry));
-      }
     } catch {}
 
     this._currentUser.set(updatedUser);
@@ -441,6 +435,10 @@ export class AuthService {
     try {
       localStorage.removeItem(this.TOKEN_KEY);
       localStorage.removeItem(this.USER_KEY);
+      localStorage.removeItem(this.CUSTOMERS_REGISTRY_KEY);
+      localStorage.removeItem('ebuyzy_admin_orders');
+      localStorage.removeItem('ebuyzy_staff_records');
+      localStorage.removeItem('ebuyzy_sub_admins');
     } catch {
       // ignore
     }

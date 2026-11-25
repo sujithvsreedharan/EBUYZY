@@ -198,8 +198,8 @@
         <thead
           class="bg-gray-50 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-800 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
           <tr>
+            <th scope="col" class="py-3.5 px-3 sm:px-4 text-center w-14">Sl. No</th>
             <th scope="col" class="py-3.5 px-4 sm:px-6">Staff Member</th>
-            <th scope="col" class="py-3.5 px-4">Login Credentials</th>
             <th scope="col" class="py-3.5 px-4">Role &amp; Details</th>
             <th scope="col" class="py-3.5 px-4">Portal Page Access</th>
             <th scope="col" class="py-3.5 px-4 text-center">Status</th>
@@ -207,8 +207,13 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-          @for (staff of filteredStaffs(); track staff.id) {
+          @for (staff of filteredStaffs(); track staff.id; let i = $index) {
           <tr class="hover:bg-gray-50/80 dark:hover:bg-gray-800/50 transition-colors">
+            <!-- Sl. No -->
+            <td class="py-4 px-3 sm:px-4 text-center font-bold text-xs text-gray-500 dark:text-gray-400">
+              {{ i + 1 }}
+            </td>
+
             <!-- Staff Member Name & Type Badge -->
             <td class="py-4 px-4 sm:px-6">
               <div class="flex items-center gap-3">
@@ -232,24 +237,18 @@
                     </span>
                     }
                   </div>
-                  <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    {{ staff.roleTitle }}
+                  <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                    <span>{{ staff.roleTitle }}</span>
+                    @if (staff.phone) {
+                    <span>&bull;</span>
+                    <span class="font-mono text-gray-600 dark:text-gray-300">+91 {{ staff.phone }}</span>
+                    }
+                    @if (staff.email) {
+                    <span>&bull;</span>
+                    <span class="font-mono text-gray-500 dark:text-gray-400">{{ staff.email }}</span>
+                    }
                   </div>
                 </div>
-              </div>
-            </td>
-
-            <!-- Credentials & Copy Button -->
-            <td class="py-4 px-4 font-mono text-xs">
-              <div class="text-gray-900 dark:text-gray-200 font-semibold">{{ staff.email }}</div>
-              <div class="text-gray-500 dark:text-gray-400 mt-0.5">+91 {{ staff.phone }}</div>
-              <div class="mt-1 flex items-center gap-2 font-sans">
-                <button type="button" (click)="copyCredentials(staff)"
-                  class="inline-flex items-center gap-1 text-[11px] font-bold text-[#FF9500] hover:underline focus-visible:outline-none">
-                  <span>{{ copiedStaffId() === staff.id ? '✓ Copied' : '📋 Copy Login' }}</span>
-                </button>
-                <span class="text-gray-300 dark:text-gray-700">&bull;</span>
-                <span class="text-[11px] text-gray-400">Pass: {{ staff.password || '••••' }}</span>
               </div>
             </td>
 

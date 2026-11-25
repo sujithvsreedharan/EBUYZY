@@ -187,16 +187,13 @@ export class CartService {
    * Load user cart from backend: POST /api/cart/get
    */
   loadUserCart(): void {
-    const user = this.authService.currentUser();
-    const userId = user?.id ? Number(user.id) : null;
     const token = this.authService.getToken();
-
-    if (!userId && !token) return;
+    if (!token) return;
 
     this.http
       .post<BackendCartResponse>(
         `${this.baseUrl}/api/cart/get`,
-        { userId: userId || undefined },
+        {},
         { headers: this.getAuthHeaders() }
       )
       .subscribe({
@@ -368,14 +365,12 @@ export class CartService {
    * Calls POST /api/cart/addOrUpdate
    */
   private syncCartAddOrUpdate(productId: number, quantity: number, isDelta: boolean): void {
-    const user = this.authService.currentUser();
-    const userId = user?.id ? Number(user.id) : undefined;
+    if (!this.authService.getToken()) return;
 
     this.http
       .post<BackendCartResponse>(
         `${this.baseUrl}/api/cart/addOrUpdate`,
         {
-          userId,
           productId,
           quantity,
           isDelta
