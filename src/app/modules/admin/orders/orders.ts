@@ -124,11 +124,43 @@ export class Orders implements OnInit {
     return order.items.map((i) => i.productName).join(', ');
   }
 
-  getGoogleMapsUrl(order: Order): string {
-    if (order.customer.coordinates) {
-      return `https://www.google.com/maps/search/?api=1&query=${order.customer.coordinates.lat},${order.customer.coordinates.lng}`;
+  getRouteMapUrl(order: Order): string {
+    // 1. Origin: Store coordinates from order, AdminOrderService, or store default (EB_STORE_GEO_LOCATION)
+    let originLat = order.storeCoordinates?.lat ?? this.orderService.getStoreCoordinates()?.lat;
+    let originLng = order.storeCoordinates?.lng ?? this.orderService.getStoreCoordinates()?.lng;
+
+    if (!originLat || !originLng) {
+      originLat = 8.4854948;
+      originLng = 76.9492364;
     }
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.customer.address + ', Kerala')}`;
+    const origin = `${originLat},${originLng}`;
+
+    // 2. Destination: User's added Google GPS location
+    let dest = '';
+    if (order.customer.coordinates?.lat && order.customer.coordinates?.lng) {
+      dest = `${order.customer.coordinates.lat},${order.customer.coordinates.lng}`;
+    } else {
+      const match = order.customer.address?.match(/\[GPS:\s*([\d.-]+)[°\s]*([NS])?,\s*([\d.-]+)[°\s]*([EW])?\]/i);
+      if (match) {
+        let lat = parseFloat(match[1]);
+        if (match[2] && match[2].toUpperCase() === 'S') lat = -lat;
+        let lng = parseFloat(match[3]);
+        if (match[4] && match[4].toUpperCase() === 'W') lng = -lng;
+        if (!isNaN(lat) && !isNaN(lng)) {
+          dest = `${lat},${lng}`;
+        }
+      }
+    }
+
+    if (!dest) {
+      dest = encodeURIComponent(order.customer.address + ', Kerala');
+    }
+
+    return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${dest}&travelmode=driving`;
+  }
+
+  getGoogleMapsUrl(order: Order): string {
+    return this.getRouteMapUrl(order);
   }
 
   getWhatsAppUrl(order: Order): string {

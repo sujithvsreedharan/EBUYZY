@@ -27,6 +27,12 @@ export class AdminOrderService {
   private readonly productService = inject(AdminProductService);
   private readonly STORAGE_KEY = 'ebuyzy_admin_orders';
 
+  private latestStoreCoordinates: { lat: number; lng: number } | null = null;
+
+  getStoreCoordinates(): { lat: number; lng: number } | null {
+    return this.latestStoreCoordinates;
+  }
+
   // No demo orders - live clean state
   private readonly DEFAULT_ORDERS: Order[] = [];
 
@@ -103,13 +109,54 @@ export class AdminOrderService {
       }))
       : [];
 
+    let coordinates: { lat: number; lng: number } | undefined;
+    const rawLat = o.latitude ?? o.lattitude ?? o.lat;
+    const rawLng = o.longitude ?? o.logitude ?? o.lng;
+    if (rawLat != null && rawLng != null && !isNaN(Number(rawLat)) && !isNaN(Number(rawLng)) && Number(rawLat) !== 0 && Number(rawLng) !== 0) {
+      coordinates = {
+        lat: Number(rawLat),
+        lng: Number(rawLng)
+      };
+    } else if (o.deliveryAddress) {
+      const gpsMatch = String(o.deliveryAddress).match(/\[GPS:\s*([\d.-]+)[°\s]*([NS])?,\s*([\d.-]+)[°\s]*([EW])?\]/i);
+      if (gpsMatch) {
+        let lat = parseFloat(gpsMatch[1]);
+        if (gpsMatch[2] && gpsMatch[2].toUpperCase() === 'S') lat = -lat;
+        let lng = parseFloat(gpsMatch[3]);
+        if (gpsMatch[4] && gpsMatch[4].toUpperCase() === 'W') lng = -lng;
+        if (!isNaN(lat) && !isNaN(lng)) {
+          coordinates = { lat, lng };
+        }
+      }
+    }
+
+    let landmark: string | undefined = o.landmark;
+    if (!landmark && o.deliveryAddress) {
+      const landmarkMatch = String(o.deliveryAddress).match(/\(Landmark:\s*([^)]+)\)/i);
+      if (landmarkMatch) {
+        landmark = landmarkMatch[1].trim();
+      }
+    }
+
+    let storeCoords: { lat: number; lng: number } | undefined;
+    const storeLat = o.storeLatitude ?? o.store_lattitude ?? o.store_latitude ?? this.latestStoreCoordinates?.lat;
+    const storeLng = o.storeLongitude ?? o.store_longitude ?? this.latestStoreCoordinates?.lng;
+    if (storeLat != null && storeLng != null && !isNaN(Number(storeLat)) && !isNaN(Number(storeLng)) && Number(storeLat) !== 0 && Number(storeLng) !== 0) {
+      storeCoords = {
+        lat: Number(storeLat),
+        lng: Number(storeLng)
+      };
+    }
+
     return {
       id: String(o.orderId || o.orderCode),
       orderNumber: o.orderCode || `ORD-${o.orderId}`,
       customer: {
         name: o.customerName || 'Customer',
         phone: o.customerMobile || '',
-        address: o.deliveryAddress || ''
+        address: o.deliveryAddress || '',
+        landmark,
+        coordinates
       },
       items,
       subtotal: Number(o.subtotal ?? o.totalAmount ?? 0),
@@ -117,6 +164,7 @@ export class AdminOrderService {
       total: Number(o.totalAmount ?? o.subtotal ?? 0),
       status: this.mapBackendStatusToFrontend(o.orderStatus),
       notes: o.note || o.orderNote || '',
+      storeCoordinates: storeCoords,
       assignedDeliveryPersonName: o.deliveryStaffName,
       assignedDeliveryPersonPhone: o.deliveryStaffMobile,
       createdAt: o.orderedAt || new Date().toISOString(),
@@ -166,17 +214,23 @@ export class AdminOrderService {
   /**
    * Fetch all real admin orders from backend: POST /api/admin/orders
    */
-  fetchAdminOrders(): Observable<{ success: boolean; orders: any[]; pagination: any }> {
+  fetchAdminOrders(): Observable<{ success: boolean; orders: any[]; storeCoordinates?: { latitude: number; longitude: number }; pagination: any }> {
     const token = this.authService.getToken();
     const headers = token ? new HttpHeaders({ Authorization: `Bearer ${token}` }) : undefined;
 
-    return this.http.post<{ success: boolean; orders: any[]; pagination: any }>(
+    return this.http.post<{ success: boolean; orders: any[]; storeCoordinates?: { latitude: number; longitude: number }; pagination: any }>(
       `${this.baseUrl}/api/admin/orders`,
       { pageNumber: 1, pageSize: 100 },
       { headers }
     ).pipe(
       tap((res) => {
         if (res.success && Array.isArray(res.orders)) {
+          if (res.storeCoordinates?.latitude && res.storeCoordinates?.longitude) {
+            this.latestStoreCoordinates = {
+              lat: Number(res.storeCoordinates.latitude),
+              lng: Number(res.storeCoordinates.longitude)
+            };
+          }
           const mapped: Order[] = res.orders.map((o: any) => this.mapBackendAdminOrder(o));
           this.ordersSubject.next(mapped);
           this.persist(mapped);

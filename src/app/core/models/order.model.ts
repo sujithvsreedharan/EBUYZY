@@ -39,6 +39,10 @@ export interface Order {
   total: number;
   status: OrderStatus;
   notes?: string;
+  storeCoordinates?: {
+    lat: number;
+    lng: number;
+  };
   // Delivery Partner assignment
   assignedDeliveryPersonId?: string;
   assignedDeliveryPersonName?: string;

@@ -289,16 +289,15 @@
             }
           </div>
 
-          <!-- Action Links: Google Maps & WhatsApp Button -->
+          <!-- Action Links: Route Map & WhatsApp Button -->
           <div class="flex flex-col sm:flex-row gap-2.5 pt-1">
-            <!-- Google Maps Link -->
-            <a [href]="getGoogleMapsUrl(currentOrder)" target="_blank" rel="noopener noreferrer"
+            <!-- Route Map Link -->
+            <a [href]="getRouteMapUrl(currentOrder)" target="_blank" rel="noopener noreferrer"
               class="flex-1 py-2 px-3 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 text-gray-800 text-xs font-semibold flex items-center justify-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]">
-              <svg class="w-4 h-4 text-rose-600 shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                <path
-                  d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+              <svg class="w-4 h-4 text-[#FF9500] shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A2 2 0 013 15.488V4.512a2 2 0 011.447-1.898L9 1m0 19l6 3m-6-3V1m6 22l5.447-2.724A2 2 0 0021 18.488V7.512a2 2 0 00-1.447-1.898L15 4m0 19V4m0 0L9 1" />
               </svg>
-              <span>View on Google Maps</span>
+              <span>Route Map</span>
             </a>
 
             <!-- WhatsApp Message Button -->
