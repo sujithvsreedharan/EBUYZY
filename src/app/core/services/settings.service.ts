@@ -12,27 +12,46 @@ export class SettingsService {
   private readonly STORAGE_KEY = 'ebuyzy_settings';
   private apiUrl = apiUrl;
 
-  constructor(private http: HttpClient) { };
+  constructor(private http: HttpClient) {
+    // Initial fetch to populate live settings from backend API
+    this.getSettings().subscribe({
+      error: (err) => console.warn('SettingsService auto-init getSettings failed:', err)
+    });
+  };
 
-  // Store coordinates (Mukkam / Kozhikode store from EB_STORE_GEO_LOCATION)
+  // Initial clean state with zero/empty values - data populated purely via API
   private readonly defaultSettings: ShopSettings = {
-    shopName: 'Ebuyzy Main Store',
-    shopLatitude: 11.2497,
-    shopLongitude: 75.7792,
-    deliveryRadiusKm: 5,
-    deliveryFee: 12,
-    minOrderAmount: 100,
-    whatsappNumber: '9876543210',
-    isOpen: true,
-    shopAddress: 'Mukkam, Kozhikode, Kerala'
+    shopName: '',
+    shopLatitude: 0,
+    shopLongitude: 0,
+    deliveryRadiusKm: 0,
+    deliveryFee: 0,
+    minOrderAmount: 0,
+    whatsappNumber: '',
+    isOpen: false,
+    shopAddress: ''
   };
 
   private readonly settingsSubject = new BehaviorSubject<ShopSettings>(this.getStoredSettings());
+  readonly settings$ = this.settingsSubject.asObservable();
+
+  getCurrentSettings(): ShopSettings {
+    return this.settingsSubject.value;
+  }
 
   private getStoredSettings(): ShopSettings {
     try {
       const data = localStorage.getItem(this.STORAGE_KEY);
-      return data ? { ...this.defaultSettings, ...JSON.parse(data) } : this.defaultSettings;
+      if (data) {
+        const parsed = JSON.parse(data);
+        // Clear out legacy hardcoded demo coordinates
+        if (parsed.shopLatitude === 11.2497 || parsed.shopLongitude === 75.7792) {
+          localStorage.removeItem(this.STORAGE_KEY);
+          return this.defaultSettings;
+        }
+        return { ...this.defaultSettings, ...parsed };
+      }
+      return this.defaultSettings;
     } catch {
       return this.defaultSettings;
     }
@@ -46,18 +65,24 @@ export class SettingsService {
 
   /**
    * API CALL: /api/getStoreDetails
-   * Sends latitude and longitude to backend to check store availability, delivery charges & distance
+   * Sends latitude and longitude to backend to check store availability, delivery charges & distance.
+   * If coordinates are omitted, backend populates with the store's registered database location.
    */
   getStoreDetails(
-    latitude: number = this.defaultSettings.shopLatitude,
-    longitude: number = this.defaultSettings.shopLongitude
+    latitude?: number,
+    longitude?: number
   ): Observable<StoreDetailsResponse> {
-    const lat = Number(latitude);
-    const lon = Number(longitude);
+    const payload: { latitude?: number; longitude?: number } = {};
+    if (latitude != null && !isNaN(Number(latitude)) && Number(latitude) !== 0) {
+      payload.latitude = Number(latitude);
+    }
+    if (longitude != null && !isNaN(Number(longitude)) && Number(longitude) !== 0) {
+      payload.longitude = Number(longitude);
+    }
 
     return this.http.post<StoreDetailsResponse>(
       `${this.apiUrl}/api/getStoreDetails`,
-      { latitude: lat, longitude: lon }
+      payload
     ).pipe(
       tap((res) => console.log('SettingsService getStoreDetails response:', res))
     );
@@ -71,25 +96,29 @@ export class SettingsService {
     const delivery = (res && res.deliveryDetails && res.deliveryDetails.length > 0) ? res.deliveryDetails[0] : null;
 
     if (!store) {
+      const current = this.settingsSubject ? this.settingsSubject.value : this.defaultSettings;
       return {
-        ...this.defaultSettings,
+        ...current,
         isOpen: res?.status === 1
       };
     }
 
     const settings: ShopSettings = {
-      shopName: store.store_name || this.defaultSettings.shopName,
-      shopLatitude: Number(store.lattitude || this.defaultSettings.shopLatitude),
-      shopLongitude: Number(store.longitude || this.defaultSettings.shopLongitude),
-      deliveryRadiusKm: Number(store.radius || this.defaultSettings.deliveryRadiusKm),
-      deliveryFee: delivery && delivery.fixed_charge != null ? Number(delivery.fixed_charge) : this.defaultSettings.deliveryFee,
-      minOrderAmount: delivery && delivery.min_order_price != null ? Number(delivery.min_order_price) : this.defaultSettings.minOrderAmount,
-      whatsappNumber: store.mob || this.defaultSettings.whatsappNumber,
+      shopName: store.store_name || '',
+      shopLatitude: Number(store.lattitude || 0),
+      shopLongitude: Number(store.longitude || 0),
+      deliveryRadiusKm: Number(store.radius || 0),
+      deliveryFee: delivery && delivery.fixed_charge != null ? Number(delivery.fixed_charge) : 0,
+      minOrderAmount: delivery && delivery.min_order_price != null ? Number(delivery.min_order_price) : 0,
+      whatsappNumber: store.mob || '',
       isOpen: res.status === 1,
-      shopAddress: store.address || this.defaultSettings.shopAddress,
+      shopAddress: store.address || '',
+      shopStart: store.open || '',
+      shopClose: store.close || '',
       distanceKm: store.DISTANCE_KM != null ? Number(store.DISTANCE_KM) : undefined,
       minDeliveryTime: delivery && delivery.min_time != null ? Number(delivery.min_time) : undefined,
-      maxDeliveryTime: delivery && delivery['max-time'] != null ? Number(delivery['max-time']) : undefined
+      maxDeliveryTime: delivery && delivery['max-time'] != null ? Number(delivery['max-time']) : undefined,
+      shopPeriod: store.days 
     };
 
     return settings;
@@ -109,8 +138,8 @@ export class SettingsService {
    * Retrieves shop settings populated from /api/getStoreDetails
    */
   getSettings(
-    latitude: number = this.defaultSettings.shopLatitude,
-    longitude: number = this.defaultSettings.shopLongitude
+    latitude?: number,
+    longitude?: number
   ): Observable<ShopSettings> {
     return this.getStoreDetails(latitude, longitude).pipe(
       map((res) => {

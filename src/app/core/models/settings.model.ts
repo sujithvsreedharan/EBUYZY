@@ -45,5 +45,9 @@ export interface ShopSettings {
   distanceKm?: number;
   minDeliveryTime?: number;
   maxDeliveryTime?: number;
+  shopStart?: string;
+  shopClose?: string;
+  shopPeriod?: number;
+
 }
 
