@@ -32,9 +32,18 @@
 
       <!-- Right Announcement Specs & WhatsApp Link -->
       <div class="hidden sm:flex items-center gap-4 text-white/80">
-        <span>Min. order: <strong class="text-[#FFD600]">₹{{ settings()?.minOrderAmount ?? 150 }}</strong></span>
+        <span>Min. order: <strong class="text-[#FFD600]">₹{{ settings()?.minOrderAmount ?? 0 }}</strong></span>
         <span class="text-white/30">&bull;</span>
-        <span>Delivery fee: <strong class="text-[#FFD600]">₹{{ settings()?.deliveryFee ?? 25 }}</strong></span>
+        <span>Delivery fee: 
+          @if (settings()?.offerDeliveryFee === 0) {
+            @if (settings()?.deliveryFee) {
+              <span class="line-through text-white/50 mr-1">₹{{ settings()?.deliveryFee }}</span>
+            }
+            <strong class="text-[#FFD600]">FREE</strong>
+          } @else {
+            <strong class="text-[#FFD600]">₹{{ settings()?.offerDeliveryFee ?? settings()?.deliveryFee ?? 0 }}</strong>
+          }
+        </span>
         <span class="text-white/30">&bull;</span>
         <a [href]="getWhatsAppHelpUrl()" target="_blank" rel="noopener noreferrer"
           class="inline-flex items-center gap-1.5 text-[#FFD600] hover:text-[#FF9500] transition-colors">
@@ -81,8 +90,7 @@
       </div>
 
       <!-- Center: Kerala Hyperlocal Delivery Zone Selector Button (Clickable!) -->
-      <button type="button" (click)="deliveryService.openModal()"
-        aria-label="Select delivery location"
+      <button type="button" (click)="deliveryService.openModal()" aria-label="Select delivery location"
         class="hidden lg:flex items-center gap-2.5 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-800/80 text-xs hover:border-[#FF9500] hover:bg-orange-50/40 dark:hover:bg-gray-800 transition-all text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]">
         <div
           class="w-7 h-7 rounded-lg bg-[#FFD600]/20 text-[#FF9500] dark:text-[#FFD600] flex items-center justify-center shrink-0 border border-[#FFD600]/40">
@@ -113,8 +121,10 @@
             }
           </div>
           <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 flex items-center gap-1">
-            <span>{{ deliveryService.hasVerifiedLocation() ? 'Pin: ' + (deliveryService.selectedLocation()?.pincode || deliveryService.selectedLocation()?.locality) : 'Check delivery availability' }}</span>
-            <span class="text-[#FF9500] font-bold underline underline-offset-2 ml-1">{{ deliveryService.hasVerifiedLocation() ? 'Change' : 'Add location' }}</span>
+            <span>{{ deliveryService.hasVerifiedLocation() ? 'Pin: ' + (deliveryService.selectedLocation()?.pincode ||
+              deliveryService.selectedLocation()?.locality) : 'Check delivery availability' }}</span>
+            <span class="text-[#FF9500] font-bold underline underline-offset-2 ml-1">{{
+              deliveryService.hasVerifiedLocation() ? 'Change' : 'Add location' }}</span>
           </p>
         </div>
       </button>
@@ -326,7 +336,7 @@
         }
 
         <!-- 3. Cart Button with Count Badge & Subtotal (Desktop & Mobile) -->
-        <!-- <button type="button" (click)="cartService.openDrawer()" aria-label="Open shopping basket"
+        <button type="button" (click)="cartService.openDrawer()" aria-label="Open shopping basket"
           class="inline-flex items-center gap-1.5 sm:gap-2.5 px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-[#FF9500] to-[#FF4D00] hover:from-[#e08500] hover:to-[#e04000] text-white text-xs sm:text-sm font-bold transition-all shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500] focus-visible:ring-offset-2 shrink-0">
           <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -342,7 +352,7 @@
             ₹{{ cartService.subtotal() | number }}
           </span>
           }
-        </button> -->
+        </button>
 
         <!-- 4. Three-Line Menu Bar (Hamburger Icon ☰) for Mobile View -->
         <button type="button" (click)="toggleMobileMenu()" aria-label="Open mobile navigation menu"
@@ -478,62 +488,6 @@
       <!-- Cart Footer Checkout Breakdown -->
       @if (cartService.items().length > 0) {
       <div class="p-5 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/80 space-y-3.5">
-        <!-- Promo / Coupon Code Section -->
-        <div class="p-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700/80 space-y-2">
-          @if (cartService.appliedCoupon(); as coupon) {
-          <!-- Applied Coupon Banner -->
-          <div
-            class="flex items-center justify-between gap-2 p-2 rounded-lg bg-orange-50 dark:bg-orange-950/40 border border-[#FF9500]/40 text-xs">
-            <div class="flex items-center gap-2 min-w-0">
-              <span
-                class="px-1.5 py-0.5 rounded bg-gradient-to-r from-[#FF9500] to-[#FF4D00] text-white font-mono font-bold text-[10px]">
-                {{ coupon.code }}
-              </span>
-              <span class="text-gray-900 dark:text-[#FFD600] font-semibold truncate">
-                {{ coupon.title }}
-              </span>
-            </div>
-            <button type="button" (click)="removeCoupon()"
-              class="text-xs text-red-500 hover:text-red-700 dark:text-red-400 font-bold hover:underline shrink-0">
-              Remove
-            </button>
-          </div>
-          } @else {
-          <!-- Promo Code Input Form -->
-          <div class="flex items-center gap-1.5">
-            <div class="relative flex-1">
-              <input type="text" [ngModel]="couponInput()" (ngModelChange)="couponInput.set($event)"
-                placeholder="Enter promo coupon code"
-                class="w-full pl-3 pr-2 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-xs uppercase placeholder:normal-case placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]" />
-            </div>
-            <button type="button" (click)="applyCoupon()" [disabled]="!couponInput().trim()"
-              class="px-3 py-1.5 rounded-lg bg-[#FF9500] hover:bg-[#e08500] disabled:opacity-40 text-white text-xs font-bold transition-colors">
-              Apply
-            </button>
-          </div>
-
-          <!-- Quick Coupon Suggestions -->
-          <div class="flex items-center gap-1.5 overflow-x-auto pb-0.5 pt-0.5 scrollbar-none">
-            <span class="text-[10px] text-gray-400 uppercase font-semibold shrink-0">Offers:</span>
-            @for (c of availableCoupons; track c.code) {
-            <button type="button" (click)="applyCoupon(c.code)"
-              class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#FFD600]/20 border border-[#FFD600]/60 text-gray-900 dark:text-[#FFD600] hover:bg-[#FFD600]/30 transition-colors shrink-0"
-              [title]="c.description">
-              {{ c.code }}
-            </button>
-            }
-          </div>
-          }
-
-          <!-- Feedback message -->
-          @if (cartService.couponFeedback(); as fb) {
-          <p class="text-[11px] font-medium"
-            [ngClass]="fb.success ? 'text-[#FF9500] dark:text-[#FFD600]' : 'text-red-600 dark:text-red-400'">
-            {{ fb.message }}
-          </p>
-          }
-        </div>
-
         <div class="space-y-1.5 text-xs text-gray-600 dark:text-gray-300">
           <div class="flex justify-between">
             <span>Items subtotal</span>
@@ -548,13 +502,15 @@
           }
 
           <div class="flex justify-between">
-            <span>Delivery fee (3-5 km local zone)</span>
+            <span>Delivery fee</span>
             <span class="font-semibold text-gray-900 dark:text-gray-100">
-              @if (cartService.appliedCoupon()?.discountType === 'free_delivery') {
-              <span class="line-through text-gray-400 mr-1.5">₹25</span>
-              <span class="text-[#FF9500] dark:text-[#FFD600] font-bold">FREE</span>
+              @if (cartService.isFreeDelivery()) {
+                @if (cartService.baseDeliveryFee() > 0) {
+                  <span class="line-through text-gray-400 mr-1.5">₹{{ cartService.baseDeliveryFee() | number }}</span>
+                }
+                <span class="text-[#FF9500] dark:text-[#FFD600] font-bold">FREE</span>
               } @else {
-              ₹{{ cartService.deliveryFee() | number }}
+                ₹{{ cartService.effectiveDeliveryFee() | number }}
               }
             </span>
           </div>

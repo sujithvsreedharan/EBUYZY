@@ -31,7 +31,8 @@ export class SettingsService {
     minOrderAmount: 0,
     whatsappNumber: '',
     isOpen: false,
-    shopAddress: ''
+    shopAddress: '',
+    offerDeliveryFee: 0
   };
 
   private readonly settingsSubject = new BehaviorSubject<ShopSettings>(this.getStoredSettings());
@@ -79,7 +80,7 @@ export class SettingsService {
 
     // If coordinates not provided, check if user already has a saved delivery location
     if ((lat == null || isNaN(Number(lat)) || Number(lat) === 0) &&
-        (lon == null || isNaN(Number(lon)) || Number(lon) === 0)) {
+      (lon == null || isNaN(Number(lon)) || Number(lon) === 0)) {
       try {
         const storedLoc = localStorage.getItem('ebuyzy_delivery_location');
         if (storedLoc) {
@@ -138,7 +139,8 @@ export class SettingsService {
       distanceKm: store.DISTANCE_KM != null ? Number(store.DISTANCE_KM) : undefined,
       minDeliveryTime: delivery && delivery.min_time != null ? Number(delivery.min_time) : undefined,
       maxDeliveryTime: delivery && delivery['max-time'] != null ? Number(delivery['max-time']) : undefined,
-      shopPeriod: store.days 
+      shopPeriod: store.days,
+      offerDeliveryFee: delivery && delivery.offer_charge != null ? Number(delivery.offer_charge) : 0
     };
 
     return settings;

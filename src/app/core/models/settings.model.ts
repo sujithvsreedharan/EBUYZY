@@ -39,6 +39,7 @@ export interface ShopSettings {
   shopLongitude: number;
   deliveryRadiusKm: number;
   deliveryFee: number;
+  offerDeliveryFee: number;
   minOrderAmount: number;
   whatsappNumber: string; // Indian WhatsApp format (e.g., "919847012345")
   isOpen: boolean;
@@ -49,6 +50,7 @@ export interface ShopSettings {
   shopStart?: string;
   shopClose?: string;
   shopPeriod?: number;
+
 
 }
 

@@ -127,10 +127,10 @@
   </section>
 
   <!-- Product Catalog Grid -->
-  <section class="space-y-4">
+  <section id="listed-products" class="space-y-4 scroll-mt-20 sm:scroll-mt-24">
     <div class="flex items-center justify-between">
       <h2 class="text-lg font-bold text-gray-900 dark:text-white">
-        {{ selectedCategoryId() === 'all' ? 'Fresh Daily Essentials' : 'Selected Category' }}
+        {{ activeCategoryTitle() }}
       </h2>
       <span class="text-xs text-gray-500 dark:text-gray-400 font-medium">
         {{ filteredProducts().length }} items available

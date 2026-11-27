@@ -30,6 +30,7 @@ export interface DeliveryCheckResult {
   deliveryTime?: string;
   minOrderAmount?: number;
   deliveryFee?: number;
+  offerDeliveryFee?: number;
 }
 
 @Injectable({
@@ -186,8 +187,9 @@ export class DeliveryAreaService {
           storeName,
           storeAddress,
           deliveryTime: deliveryTimeStr,
-          minOrderAmount: delivery?.min_order_price,
-          deliveryFee: delivery?.fixed_charge
+          minOrderAmount: delivery?.min_order_price != null ? Number(delivery.min_order_price) : undefined,
+          deliveryFee: delivery?.fixed_charge != null ? Number(delivery.fixed_charge) : undefined,
+          offerDeliveryFee: delivery?.offer_charge != null ? Number(delivery.offer_charge) : undefined
         };
       }),
       catchError((err) => {

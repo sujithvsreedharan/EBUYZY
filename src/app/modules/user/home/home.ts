@@ -78,6 +78,13 @@ export class Home implements OnInit {
   readonly selectedProductForUnits = signal<Product | null>(null);
   readonly selectedProductForDetail = signal<Product | null>(null);
 
+  readonly activeCategoryTitle = computed(() => {
+    const catId = this.selectedCategoryId();
+    if (catId === 'all') return 'Fresh Daily Essentials';
+    const cat = this.categories().find((c) => c.id === catId);
+    return cat ? cat.name : 'Selected Category';
+  });
+
   openProductDetailModal(product: Product): void {
     this.selectedProductForDetail.set(product);
   }
@@ -86,8 +93,20 @@ export class Home implements OnInit {
     this.selectedProductForDetail.set(null);
   }
 
-  selectCategory(catId: string): void {
+  selectCategory(catId: string, shouldScroll: boolean = true): void {
     this.selectedCategoryId.set(catId);
+    if (shouldScroll) {
+      this.scrollToProducts();
+    }
+  }
+
+  scrollToProducts(): void {
+    setTimeout(() => {
+      const el = document.getElementById('listed-products');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 60);
   }
 
   getItemQty(productId: string): number {

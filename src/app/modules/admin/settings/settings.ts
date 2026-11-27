@@ -24,9 +24,9 @@ export class Settings implements OnInit {
     whatsappNumber: ['', [Validators.required, Validators.pattern(/^[0-9]{10,12}$/)]],
     shopLatitude: [null, [Validators.required]],
     shopLongitude: [null, [Validators.required]],
-    deliveryRadiusKm: [4.5, [Validators.required, Validators.min(0.5), Validators.max(25)]],
-    deliveryFee: [25, [Validators.required, Validators.min(0)]],
-    minOrderAmount: [150, [Validators.required, Validators.min(0)]],
+    deliveryRadiusKm: [null, [Validators.required, Validators.min(0.5), Validators.max(25)]],
+    deliveryFee: [null, [Validators.required, Validators.min(0)]],
+    minOrderAmount: [null, [Validators.required, Validators.min(0)]],
     shopAddress: ['', [Validators.required]],
     isOpen: [true]
   });

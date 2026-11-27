@@ -54,40 +54,7 @@ export interface BackendCartResponse {
   message?: string;
 }
 
-export const AVAILABLE_COUPONS: PromoCoupon[] = [
-  {
-    code: 'KERALA50',
-    title: '₹50 Flat Discount',
-    description: 'Flat ₹50 OFF on Kerala grocery orders above ₹250',
-    discountType: 'fixed',
-    discountValue: 50,
-    minOrder: 250
-  },
-  {
-    code: 'FREEDEL',
-    title: 'Free Delivery',
-    description: '100% Free delivery across Kakkanad 3-5 km express zone',
-    discountType: 'free_delivery',
-    discountValue: 25,
-    minOrder: 150
-  },
-  {
-    code: 'FIRSTORDER',
-    title: 'Welcome ₹40 OFF',
-    description: 'Special introductory ₹40 discount on orders above ₹200',
-    discountType: 'fixed',
-    discountValue: 40,
-    minOrder: 200
-  },
-  {
-    code: 'ONAM2026',
-    title: '10% Harvest OFF',
-    description: '10% savings on farm-fresh vegetables and Kerala staples',
-    discountType: 'percent',
-    discountValue: 10,
-    minOrder: 300
-  }
-];
+export const AVAILABLE_COUPONS: PromoCoupon[] = [];
 
 @Injectable({
   providedIn: 'root'
@@ -120,13 +87,23 @@ export class CartService {
 
   readonly baseDeliveryFee = computed(() => {
     const s = this.settings();
-    return s ? s.deliveryFee : 25;
+    return s && s.deliveryFee != null ? Number(s.deliveryFee) : 0;
+  });
+
+  readonly isFreeDelivery = computed(() => {
+    const s = this.settings();
+    if (s && s.offerDeliveryFee === 0) return true;
+    const coupon = this.appliedCoupon();
+    return coupon?.discountType === 'free_delivery';
   });
 
   readonly effectiveDeliveryFee = computed(() => {
-    const coupon = this.appliedCoupon();
-    if (coupon?.discountType === 'free_delivery') {
+    if (this.isFreeDelivery()) {
       return 0;
+    }
+    const s = this.settings();
+    if (s && s.offerDeliveryFee != null && s.offerDeliveryFee > 0) {
+      return Number(s.offerDeliveryFee);
     }
     return this.baseDeliveryFee();
   });
@@ -156,7 +133,7 @@ export class CartService {
 
   readonly minOrderAmount = computed(() => {
     const s = this.settings();
-    return s ? s.minOrderAmount : 150;
+    return s && s.minOrderAmount != null ? Number(s.minOrderAmount) : 0;
   });
 
   readonly meetsMinOrder = computed(() =>
@@ -253,7 +230,7 @@ export class CartService {
     if (!found) {
       this.couponFeedback.set({
         success: false,
-        message: `Invalid coupon code "${inputCode}". Try KERALA50 or FREEDEL.`
+        message: `Invalid coupon code "${inputCode}".`
       });
       return false;
     }

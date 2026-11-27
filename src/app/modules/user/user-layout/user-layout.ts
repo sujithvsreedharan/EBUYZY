@@ -3,7 +3,7 @@ import { CommonModule, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { CartService, AVAILABLE_COUPONS } from '../../../core/services/cart.service';
+import { CartService } from '../../../core/services/cart.service';
 import { SettingsService } from '../../../core/services/settings.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ThemeService } from '../../../core/services/theme.service';
@@ -27,9 +27,6 @@ export class UserLayout {
   protected readonly notificationService = inject(NotificationService);
   private readonly settingsService = inject(SettingsService);
   private readonly router = inject(Router);
-
-  readonly availableCoupons = AVAILABLE_COUPONS;
-  readonly couponInput = signal<string>('');
 
   readonly settings = toSignal(this.settingsService.getSettings());
   readonly currentYear = new Date().getFullYear();
@@ -81,21 +78,6 @@ export class UserLayout {
     if (item.link) {
       this.router.navigate([item.link]);
     }
-  }
-
-  applyCoupon(code?: string): void {
-    const toApply = code || this.couponInput();
-    if (toApply) {
-      const ok = this.cartService.applyCoupon(toApply);
-      if (ok) {
-        this.couponInput.set('');
-      }
-    }
-  }
-
-  removeCoupon(): void {
-    this.cartService.removeCoupon();
-    this.couponInput.set('');
   }
 
   openSignInModal(): void {

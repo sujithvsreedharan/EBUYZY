@@ -298,13 +298,15 @@
           }
 
           <div class="flex justify-between">
-            <span>Delivery fee (3-5 km radius)</span>
+            <span>Delivery fee</span>
             <span class="font-semibold text-gray-900 dark:text-white">
-              @if (cartService.appliedCoupon()?.discountType === 'free_delivery') {
-              <span class="line-through text-gray-400 mr-1.5">₹25</span>
-              <span class="text-[#FF9500] dark:text-[#FFD600] font-bold">FREE</span>
+              @if (cartService.isFreeDelivery()) {
+                @if (cartService.baseDeliveryFee() > 0) {
+                  <span class="line-through text-gray-400 mr-1.5">₹{{ cartService.baseDeliveryFee() | number }}</span>
+                }
+                <span class="text-[#FF9500] dark:text-[#FFD600] font-bold">FREE</span>
               } @else {
-              ₹{{ cartService.deliveryFee() | number }}
+                ₹{{ cartService.deliveryFee() | number }}
               }
             </span>
           </div>

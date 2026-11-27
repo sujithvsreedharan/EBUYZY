@@ -131,11 +131,21 @@
             </span>
           </div>
           }
-          @if (result.deliveryFee != null) {
+          @if (result.offerDeliveryFee === 0) {
+          <div class="flex items-center justify-between">
+            <span class="text-gray-600 dark:text-gray-400">Delivery charge:</span>
+            <span class="font-bold text-emerald-800 dark:text-emerald-300 font-mono">
+              @if (result.deliveryFee != null && result.deliveryFee > 0) {
+              <span class="line-through text-gray-400 text-xs mr-1 font-normal">₹{{ result.deliveryFee }}</span>
+              }
+              FREE
+            </span>
+          </div>
+          } @else if (result.deliveryFee != null) {
           <div class="flex items-center justify-between">
             <span class="text-gray-600 dark:text-gray-400">Delivery charge:</span>
             <span class="font-bold text-gray-800 dark:text-gray-200 font-mono">
-              ₹{{ result.deliveryFee }}
+              ₹{{ result.offerDeliveryFee != null ? result.offerDeliveryFee : result.deliveryFee }}
             </span>
           </div>
           }
