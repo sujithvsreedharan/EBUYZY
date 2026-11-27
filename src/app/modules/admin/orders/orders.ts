@@ -59,7 +59,7 @@ export class Orders implements OnInit {
 
   refreshOrders(): void {
     this.orderService.fetchAdminOrders().subscribe({
-      error: () => {}
+      error: () => { }
     });
   }
 
@@ -173,7 +173,7 @@ export class Orders implements OnInit {
       `Current Status: ${order.status}\n` +
       `Total: ₹${order.total}\n` +
       `Delivery Address: ${order.customer.address}\n\n` +
-      `Thank you for choosing EBUYZY Kakkanad!`;
+      `Thank you for choosing EBUYZY!`;
 
     return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
   }

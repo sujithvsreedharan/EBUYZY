@@ -66,18 +66,36 @@ export class SettingsService {
   /**
    * API CALL: /api/getStoreDetails
    * Sends latitude and longitude to backend to check store availability, delivery charges & distance.
-   * If coordinates are omitted, backend populates with the store's registered database location.
+   * If coordinates are omitted, checks for stored verified delivery location or retrieves registered store info.
    */
   getStoreDetails(
     latitude?: number,
     longitude?: number
   ): Observable<StoreDetailsResponse> {
-    const payload: { latitude?: number; longitude?: number } = {};
-    if (latitude != null && !isNaN(Number(latitude)) && Number(latitude) !== 0) {
-      payload.latitude = Number(latitude);
+    let lat = latitude;
+    let lon = longitude;
+
+    // If coordinates not provided, check if user already has a saved delivery location
+    if ((lat == null || isNaN(Number(lat)) || Number(lat) === 0) &&
+        (lon == null || isNaN(Number(lon)) || Number(lon) === 0)) {
+      try {
+        const storedLoc = localStorage.getItem('ebuyzy_delivery_location');
+        if (storedLoc) {
+          const parsed = JSON.parse(storedLoc);
+          if (parsed && parsed.latitude && parsed.longitude) {
+            lat = Number(parsed.latitude);
+            lon = Number(parsed.longitude);
+          }
+        }
+      } catch { }
     }
-    if (longitude != null && !isNaN(Number(longitude)) && Number(longitude) !== 0) {
-      payload.longitude = Number(longitude);
+
+    const payload: { latitude?: number; longitude?: number } = {};
+    if (lat != null && !isNaN(Number(lat)) && Number(lat) !== 0) {
+      payload.latitude = Number(lat);
+    }
+    if (lon != null && !isNaN(Number(lon)) && Number(lon) !== 0) {
+      payload.longitude = Number(lon);
     }
 
     return this.http.post<StoreDetailsResponse>(

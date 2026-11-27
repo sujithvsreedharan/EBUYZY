@@ -53,7 +53,7 @@ export class AssignedOrders implements OnInit {
         name: user.name,
         phone: user.phone || '',
         vehicle: user.vehicleNumber || user.vehicleType || 'Delivery Bike',
-        zone: user.zone || 'Kakkanad, Kochi'
+        zone: user.zone
       };
     }
 
@@ -65,7 +65,7 @@ export class AssignedOrders implements OnInit {
         name: partner.name,
         phone: partner.phone,
         vehicle: partner.vehicleNumber || partner.vehicleType || 'Delivery Bike',
-        zone: partner.zone || 'Kakkanad, Kochi'
+        zone: partner.zone
       };
     }
 

@@ -141,7 +141,7 @@ export class UserLayout {
     const raw = this.settings()?.whatsappNumber?.replace(/\D/g, '') || '9847000111';
     const clean = raw.length === 10 ? '91' + raw : raw;
     const msg = encodeURIComponent(
-      'Namaskaram EBUYZY! 👋 I have a question regarding grocery delivery in Kakkanad.'
+      'Namaskaram EBUYZY! 👋 I have a question regarding grocery delivery .'
     );
     return `https://wa.me/${clean}?text=${msg}`;
   }

@@ -26,6 +26,7 @@ export interface DeliveryInfo {
 export interface StoreDetailsResponse {
   success: boolean;
   status: number; // 1 = Available, 0 = Unavailable
+  requiresLocation?: boolean;
   message: string;
   description: string;
   storeDetails: StoreInfo[];

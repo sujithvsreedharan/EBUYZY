@@ -15,9 +15,9 @@
         </span>
         <span class="font-semibold text-white">
           @if (settings()?.isOpen) {
-            ⚡ Fast {{ settings()?.minDeliveryTime }}-{{ settings()?.maxDeliveryTime }} mins delivery
+          ⚡ Fast {{ settings()?.minDeliveryTime }}-{{ settings()?.maxDeliveryTime }} mins delivery
           } @else {
-            Store is currently offline
+          Store is currently offline
           }
         </span>
         <span class="text-white/40 hidden xs:inline">&bull;</span>
@@ -81,9 +81,9 @@
       </div>
 
       <!-- Center: Kerala Hyperlocal Delivery Zone Selector Button (Clickable!) -->
-      <!-- <button type="button" (click)="deliveryService.openModal()"
-        aria-label="Check store delivery coverage area"
-        class="hidden lg:flex items-center gap-3 px-3.5 py-2 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-800/80 text-xs hover:border-[#FF9500] hover:bg-orange-50/40 dark:hover:bg-gray-800 transition-all text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]">
+      <button type="button" (click)="deliveryService.openModal()"
+        aria-label="Select delivery location"
+        class="hidden lg:flex items-center gap-2.5 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-800/80 text-xs hover:border-[#FF9500] hover:bg-orange-50/40 dark:hover:bg-gray-800 transition-all text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9500]">
         <div
           class="w-7 h-7 rounded-lg bg-[#FFD600]/20 text-[#FF9500] dark:text-[#FFD600] flex items-center justify-center shrink-0 border border-[#FFD600]/40">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -104,19 +104,20 @@
               ✓ {{ deliveryService.selectedLocation()?.distanceKm }} km
             </span>
             } @else {
-            <span class="font-bold text-gray-900 dark:text-gray-100">{{ settings()?.shopName || 'Store Delivery' }}</span>
-            <span
-              class="text-[10px] text-black font-extrabold bg-[#FFD600] px-1.5 py-0.2 rounded">
-              {{ settings()?.deliveryRadiusKm ?? 5 }} km
+            <span class="font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1">
+              <span>📍 Add delivery location</span>
+            </span>
+            <span class="text-[10px] text-black font-extrabold bg-[#FFD600] px-1.5 py-0.2 rounded">
+              Required
             </span>
             }
           </div>
           <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 flex items-center gap-1">
             <span>{{ deliveryService.hasVerifiedLocation() ? 'Pin: ' + (deliveryService.selectedLocation()?.pincode || deliveryService.selectedLocation()?.locality) : 'Check delivery availability' }}</span>
-            <span class="text-[#FF9500] font-bold underline underline-offset-2 ml-1">Change</span>
+            <span class="text-[#FF9500] font-bold underline underline-offset-2 ml-1">{{ deliveryService.hasVerifiedLocation() ? 'Change' : 'Add location' }}</span>
           </p>
         </div>
-      </button> -->
+      </button>
 
       <!-- Right Navigation: Notification, Day/Night Toggle, Desktop Support/Auth, Cart Basket, and Mobile 3-Line Menu -->
       <div class="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
@@ -380,14 +381,14 @@
             }
           </span>
           } @else {
-          <span class="font-bold text-gray-900 dark:text-white">
-            Check store delivery area
+          <span class="font-bold text-amber-800 dark:text-amber-300">
+            📍 Please add your delivery location
           </span>
           }
         </div>
       </div>
       <span class="text-[11px] font-bold text-[#FF9500] shrink-0 underline underline-offset-2">
-        {{ deliveryService.hasVerifiedLocation() ? 'Change' : 'Check Area' }}
+        {{ deliveryService.hasVerifiedLocation() ? 'Change' : 'Add Location' }}
       </span>
     </button>
   </div>
@@ -757,7 +758,8 @@
               </div>
               <div class="flex-1 min-w-0">
                 <span>Delivery Coverage Area</span>
-                <p class="text-[10px] text-gray-400 font-normal truncate">{{ settings()?.deliveryRadiusKm ?? 5 }} km store coverage</p>
+                <p class="text-[10px] text-gray-400 font-normal truncate">{{ settings()?.deliveryRadiusKm ?? 5 }} km
+                  store coverage</p>
               </div>
             </button>
 
@@ -834,7 +836,7 @@
           }
 
           <div class="text-center text-[10px] text-gray-400 space-y-0.5">
-            <p class="font-bold text-gray-500 dark:text-gray-400">EBUYZY Express &bull; Kakkanad, Kochi</p>
+            <p class="font-bold text-gray-500 dark:text-gray-400">EBUYZY Express &bull;</p>
             <p>&copy; {{ currentYear }} All rights reserved &bull; 30-45 mins delivery</p>
           </div>
         </div>
@@ -864,7 +866,7 @@
           <div>
             <h4 class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white leading-snug">30-45 Mins Express</h4>
             <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">
-              Hyperlocal delivery within 3-5 km of Kakkanad, Kochi.
+              Hyperlocal delivery within 3-5 km 
             </p>
           </div>
         </div>
@@ -932,7 +934,7 @@
 
           <!-- <p class="text-xs text-gray-400 leading-relaxed">
             Delivering farm-fresh vegetables, Palakkadan Matta rice, cold-pressed coconut oil, and everyday pantry
-            essentials directly to Kakkanad households in 30-45 minutes.
+            essentials directly to  households in 30-45 minutes.
           </p> -->
 
           <!-- WhatsApp Chat Button -->
@@ -973,7 +975,7 @@
             Delivery Zones (3-5 km)
           </h3>
           <div class="flex flex-wrap gap-1.5 text-[11px]">
-            <span class="px-2 py-1 rounded-md bg-gray-800 text-gray-300 border border-gray-700">Kakkanad Hub</span>
+            <span class="px-2 py-1 rounded-md bg-gray-800 text-gray-300 border border-gray-700"> Hub</span>
             <span class="px-2 py-1 rounded-md bg-gray-800 text-gray-300 border border-gray-700">Infopark Phase 1 &
               2</span>
             <span class="px-2 py-1 rounded-md bg-gray-800 text-gray-300 border border-gray-700">Padamugal</span>
@@ -999,7 +1001,8 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span>Operating Hours: <strong>{{settings()?.shopStart}} – {{settings()?.shopClose}}</strong> ({{settings()?.shopPeriod}} Days)</span>
+              <span>Operating Hours: <strong>{{settings()?.shopStart}} – {{settings()?.shopClose}}</strong>
+                ({{settings()?.shopPeriod}} Days)</span>
             </li>
             <li class="flex items-start gap-2">
               <svg class="w-4 h-4 text-[#FFD600] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1017,13 +1020,13 @@
             </li>
             <li class="flex items-start gap-2">
               <a [href]="getWhatsAppHelpUrl()" target="_blank" rel="noopener noreferrer"
-            class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#FF9500]/20 hover:bg-[#FF9500]/30 text-[#5eff00] border border-[#FF9500]/40 text-xs font-bold transition-colors">
-            <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
-              <path
-                d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z" />
-            </svg>
-            <span>Chat on WhatsApp</span>
-          </a>
+                class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#FF9500]/20 hover:bg-[#FF9500]/30 text-[#5eff00] border border-[#FF9500]/40 text-xs font-bold transition-colors">
+                <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                  <path
+                    d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z" />
+                </svg>
+                <span>Chat on WhatsApp</span>
+              </a>
             </li>
           </ul>
         </div>
