@@ -1,14 +1,16 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Observable, BehaviorSubject, of, tap } from 'rxjs';
 import { delay, map } from 'rxjs/operators';
 import { ShopSettings, StoreDetailsResponse } from '../models/settings.model';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { apiUrl } from '../../app.constant';
+import { AuthService } from './auth.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class SettingsService {
+  private readonly authService = inject(AuthService);
   private readonly STORAGE_KEY = 'ebuyzy_settings';
   private apiUrl = apiUrl;
 
@@ -169,25 +171,43 @@ export class SettingsService {
     );
   }
 
-  toggleShopStatus(): Observable<ShopSettings> {
-    const current = this.settingsSubject.value;
-    const updated: ShopSettings = {
-      ...current,
-      isOpen: !current.isOpen
-    };
-    this.persistSettings(updated);
-    this.settingsSubject.next(updated);
-    return of(updated).pipe(delay(150));
-  }
-
   updateSettings(updates: Partial<ShopSettings>): Observable<ShopSettings> {
     const current = this.settingsSubject.value;
     const updated: ShopSettings = {
       ...current,
       ...updates
     };
-    this.persistSettings(updated);
-    this.settingsSubject.next(updated);
-    return of(updated).pipe(delay(200));
+
+    const token = this.authService.getToken() || (typeof localStorage !== 'undefined' ? localStorage.getItem('ebuyzy_token') : null);
+    const headers = token ? new HttpHeaders({ Authorization: `Bearer ${token}` }) : undefined;
+
+    const payload = {
+      shopName: updated.shopName,
+      whatsappNumber: updated.whatsappNumber,
+      storeAddress: updated.shopAddress || '',
+      latitude: Number(updated.shopLatitude),
+      longitude: Number(updated.shopLongitude),
+      deliveryRadiusKm: Number(updated.deliveryRadiusKm),
+      deliveryFee: Number(updated.deliveryFee),
+      minOrderAmount: Number(updated.minOrderAmount),
+      shopOpen: Boolean(updated.isOpen)
+    };
+
+    return this.http.post<{ success: boolean; message?: string }>(
+      `${this.apiUrl}/api/admin/store/settings/update`,
+      payload,
+      { headers }
+    ).pipe(
+      tap(() => {
+        this.persistSettings(updated);
+        this.settingsSubject.next(updated);
+      }),
+      map(() => updated)
+    );
+  }
+
+  toggleShopStatus(): Observable<ShopSettings> {
+    const current = this.settingsSubject.value;
+    return this.updateSettings({ isOpen: !current.isOpen });
   }
 }

@@ -82,8 +82,9 @@ export class Settings implements OnInit {
           this.showSuccessBanner.set(true);
           setTimeout(() => this.showSuccessBanner.set(false), 4000);
         },
-        error: () => {
+        error: (err) => {
           this.isSaving.set(false);
+          alert(err?.error?.message || err?.message || 'Failed to save store settings');
         }
       });
   }
