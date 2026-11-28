@@ -41,6 +41,7 @@ export class UserLayout implements OnInit {
 
   ngOnInit(): void {
     this.deliveryService.checkInitialPopupTrigger();
+
   }
 
   @HostListener('document:keydown.escape')

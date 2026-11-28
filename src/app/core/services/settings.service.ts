@@ -1,16 +1,18 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, Injector } from '@angular/core';
 import { Observable, BehaviorSubject, of, tap } from 'rxjs';
 import { delay, map } from 'rxjs/operators';
 import { ShopSettings, StoreDetailsResponse } from '../models/settings.model';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { apiUrl } from '../../app.constant';
 import { AuthService } from './auth.service';
+import { DeliveryAreaService } from './delivery-area.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class SettingsService {
   private readonly authService = inject(AuthService);
+  private readonly injector = inject(Injector);
   private readonly STORAGE_KEY = 'ebuyzy_settings';
   private apiUrl = apiUrl;
 
@@ -67,6 +69,25 @@ export class SettingsService {
   }
 
   /**
+   * Prompts the "Check Store & Delivery Availability" modal to get latitude and longitude
+   */
+  promptLocationModal(): void {
+    if (typeof window === 'undefined' || window.location.pathname.startsWith('/admin')) {
+      return;
+    }
+    setTimeout(() => {
+      try {
+        const deliveryService = this.injector.get(DeliveryAreaService);
+        if (deliveryService && !deliveryService.isModalOpen()) {
+          deliveryService.openModal();
+        }
+      } catch (err) {
+        console.warn('Could not trigger location modal from SettingsService:', err);
+      }
+    }, 250);
+  }
+
+  /**
    * API CALL: /api/getStoreDetails
    * Sends latitude and longitude to backend to check store availability, delivery charges & distance.
    * If coordinates are omitted, checks for stored verified delivery location or retrieves registered store info.
@@ -93,13 +114,25 @@ export class SettingsService {
       } catch { }
     }
 
-    const payload: { latitude?: number; longitude?: number } = {};
-    if (lat != null && !isNaN(Number(lat)) && Number(lat) !== 0) {
-      payload.latitude = Number(lat);
+    // Do NOT pass null or empty coordinates to the backend API!
+    // Instead, open the "Check Store & Delivery Availability" modal to get latitude and longitude from user.
+    if (lat == null || lon == null || isNaN(Number(lat)) || isNaN(Number(lon)) || Number(lat) === 0 || Number(lon) === 0) {
+      this.promptLocationModal();
+      return of({
+        success: true,
+        status: 0,
+        requiresLocation: true,
+        message: 'Please add your location',
+        description: 'Select or add your location to check delivery availability.',
+        storeDetails: [],
+        deliveryDetails: []
+      });
     }
-    if (lon != null && !isNaN(Number(lon)) && Number(lon) !== 0) {
-      payload.longitude = Number(lon);
-    }
+
+    const payload = {
+      latitude: Number(lat),
+      longitude: Number(lon)
+    };
 
     return this.http.post<StoreDetailsResponse>(
       `${this.apiUrl}/api/getStoreDetails`,
