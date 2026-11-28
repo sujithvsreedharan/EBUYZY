@@ -6,7 +6,7 @@ import { CartService } from '../../../core/services/cart.service';
 import { AdminOrderService } from '../../../core/services/admin-order.service';
 import { SettingsService } from '../../../core/services/settings.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { DeliveryAreaService } from '../../../core/services/delivery-area.service';
+import { DeliveryAreaService, DeliveryAvailableResponse } from '../../../core/services/delivery-area.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { toSignal } from '@angular/core/rxjs-interop';
 
@@ -30,8 +30,10 @@ export class Checkout implements OnInit {
   readonly settings = toSignal(this.settingsService.getSettings());
 
   readonly isLocating = signal<boolean>(false);
+  readonly isCheckingDelivery = signal<boolean>(false);
   readonly locationDetected = signal<{ lat: number; lng: number } | null>(null);
   readonly locationError = signal<string | null>(null);
+  readonly deliveryCheckResult = signal<DeliveryAvailableResponse | null>(null);
   readonly showGpsPrompt = signal<boolean>(false);
   readonly gpsPromptType = signal<'disabled' | 'denied' | 'insecure' | 'timeout' | null>(null);
   readonly gpsPromptMessage = signal<string>('');
@@ -136,7 +138,10 @@ export class Checkout implements OnInit {
             if (savedGps) {
               const latLngMatch = savedGps.match(/([0-9.]+)[°\s]*[NS][,\s]+([0-9.]+)[°\s]*[EW]/i);
               if (latLngMatch) {
-                this.locationDetected.set({ lat: parseFloat(latLngMatch[1]), lng: parseFloat(latLngMatch[2]) });
+                const lat = parseFloat(latLngMatch[1]);
+                const lng = parseFloat(latLngMatch[2]);
+                this.locationDetected.set({ lat, lng });
+                this.checkDeliveryArea(lat, lng);
               }
             }
           } else if (profile) {
@@ -154,6 +159,7 @@ export class Checkout implements OnInit {
               const lng = Number(verifiedLoc.longitude.toFixed(5));
               if (!this.locationDetected()) {
                 this.locationDetected.set({ lat, lng });
+                this.checkDeliveryArea(lat, lng);
               }
               this.checkoutForm.patchValue({
                 gpsLocation: `${lat}° N, ${lng}° E`
@@ -170,6 +176,7 @@ export class Checkout implements OnInit {
           const lat = Number(verifiedLoc.latitude.toFixed(5));
           const lng = Number(verifiedLoc.longitude.toFixed(5));
           this.locationDetected.set({ lat, lng });
+          this.checkDeliveryArea(lat, lng);
           this.checkoutForm.patchValue({
             gpsLocation: `${lat}° N, ${lng}° E`
           });
@@ -187,68 +194,91 @@ export class Checkout implements OnInit {
     this.locationError.set(null);
     this.showGpsPrompt.set(false);
     this.gpsPromptType.set(null);
+    this.deliveryCheckResult.set(null);
 
     // 1. Check if browser has geolocation API
     if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
-      if (typeof window !== 'undefined' && !window.isSecureContext) {
-        this.promptGpsIssue(
-          'insecure',
-          'Mobile browsers require HTTPS for direct GPS on local network IPs. Attempting network location fallback...'
-        );
-        this.useNetworkLocation(false);
-      } else {
-        this.promptGpsIssue('disabled', 'Geolocation is not supported by your browser.');
-      }
+      this.promptGpsIssue('disabled', 'Geolocation is not supported by your browser. Please enter coordinates manually.');
       return;
     }
 
     this.isLocating.set(true);
 
-    // 2. Request current position with balanced mobile options
-    // enableHighAccuracy: false ensures fast cell/Wi-Fi/fused location without waiting for satellite lock indoors
+    // 2. Request current position with High Accuracy & Fresh reading (maximumAge: 0)
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords;
         this.applyCoordinates(latitude, longitude);
       },
       (error) => {
-        console.warn('Geolocation request failed:', error.code, error.message);
+        console.warn('High accuracy GPS error, trying fallback:', error.code, error.message);
 
-        if (error.code === error.PERMISSION_DENIED) {
-          // If accessing via HTTP LAN IP on mobile, it is blocked by insecure origin
-          if (typeof window !== 'undefined' && !window.isSecureContext) {
-            this.promptGpsIssue(
-              'insecure',
-              'Mobile browsers require HTTPS for GPS on network IPs. You can use network location or enable "Insecure origins treated as secure" in chrome://flags.'
-            );
-            this.useNetworkLocation(true);
-          } else {
-            this.promptGpsIssue(
-              'denied',
-              'Location permission was denied. Please allow location permissions in your mobile browser settings (tap the lock icon 🔒 beside the URL bar), then tap "Try Again".'
-            );
-          }
-        } else if (error.code === error.POSITION_UNAVAILABLE) {
-          // Device GPS hardware/toggle is turned off in quick settings
-          this.promptGpsIssue(
-            'disabled',
-            'GPS / Location is turned OFF on your phone. Please swipe down your quick settings, turn ON "Location", and tap "Try Again".'
+        // If high accuracy times out (e.g. indoors), try with standard accuracy once without cached data
+        if (error.code === error.TIMEOUT) {
+          navigator.geolocation.getCurrentPosition(
+            (fallbackPos) => {
+              this.applyCoordinates(fallbackPos.coords.latitude, fallbackPos.coords.longitude);
+            },
+            (fallbackError) => {
+              this.handleGpsFailure(fallbackError);
+            },
+            { timeout: 8000, enableHighAccuracy: false, maximumAge: 0 }
           );
-        } else if (error.code === error.TIMEOUT) {
-          this.promptGpsIssue(
-            'timeout',
-            'GPS location request timed out. Please ensure Location is enabled with clear reception, or tap "Use Network Location".'
-          );
-          this.useNetworkLocation(true);
-        } else {
-          this.promptGpsIssue(
-            'disabled',
-            'Could not retrieve GPS location. Please turn on Location on your phone and tap "Try Again".'
-          );
+          return;
         }
+
+        this.handleGpsFailure(error);
       },
-      { timeout: 12000, enableHighAccuracy: false, maximumAge: 30000 }
+      { timeout: 15000, enableHighAccuracy: true, maximumAge: 0 }
     );
+  }
+
+  private handleGpsFailure(error: GeolocationPositionError): void {
+    this.isLocating.set(false);
+
+    if (error.code === error.PERMISSION_DENIED) {
+      this.promptGpsIssue(
+        'denied',
+        'Location permission was denied. Please allow location access in your browser (tap the lock icon 🔒 beside the URL bar), or type/paste your GPS coordinates below.'
+      );
+    } else if (error.code === error.POSITION_UNAVAILABLE) {
+      this.promptGpsIssue(
+        'disabled',
+        'Device Location / GPS is turned OFF. Please swipe down quick settings, turn ON "Location", and tap "Try Again", or enter coordinates manually.'
+      );
+    } else if (error.code === error.TIMEOUT) {
+      this.promptGpsIssue(
+        'timeout',
+        'GPS location request timed out. Please ensure Location is enabled with clear signal, or paste your coordinates manually.'
+      );
+    } else {
+      this.promptGpsIssue(
+        'disabled',
+        'Could not retrieve live GPS coordinates. Please ensure Location is turned on or enter your coordinates below.'
+      );
+    }
+  }
+
+  /**
+   * Parses manual coordinate input (e.g. "11.30038, 76.00072") and checks delivery
+   */
+  onGpsInputChange(value: string): void {
+    if (!value || !value.trim()) {
+      this.locationDetected.set(null);
+      this.deliveryCheckResult.set(null);
+      return;
+    }
+
+    // Match formats like "11.30038, 76.00072", "11.30038° N, 76.00072° E", "11.300380 76.000728"
+    const match = value.match(/(-?\d+\.?\d*)[°\s]*[NS]?[,\s]+(-?\d+\.?\d*)[°\s]*[EW]?/i);
+    if (match) {
+      const lat = parseFloat(match[1]);
+      const lng = parseFloat(match[2]);
+      if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+        this.locationDetected.set({ lat, lng });
+        this.checkDeliveryArea(lat, lng);
+      }
+    }
   }
 
   /**
@@ -259,8 +289,8 @@ export class Checkout implements OnInit {
     this.showGpsPrompt.set(false);
     this.locationError.set(null);
 
-    const lat = Number(latitude.toFixed(5));
-    const lng = Number(longitude.toFixed(5));
+    const lat = Number(latitude.toFixed(6));
+    const lng = Number(longitude.toFixed(6));
     this.locationDetected.set({ lat, lng });
 
     const formattedGps = `${lat}° N, ${lng}° E`;
@@ -279,6 +309,31 @@ export class Checkout implements OnInit {
         longitude: lng
       });
     }
+
+    // Verify delivery area availability via POST /api/delivery/available
+    this.checkDeliveryArea(lat, lng);
+  }
+
+  /**
+   * Checks whether the coordinates are within store delivery coverage
+   */
+  checkDeliveryArea(latitude: number, longitude: number): void {
+    this.isCheckingDelivery.set(true);
+
+    this.deliveryService.checkDeliveryAvailable(latitude, longitude).subscribe({
+      next: (res) => {
+        this.isCheckingDelivery.set(false);
+        this.deliveryCheckResult.set(res);
+      },
+      error: (err) => {
+        this.isCheckingDelivery.set(false);
+        this.deliveryCheckResult.set({
+          success: false,
+          isDeliverable: false,
+          message: err?.error?.message || 'Could not verify delivery area. Please check your network and try again.'
+        });
+      }
+    });
   }
 
   /**
@@ -341,6 +396,11 @@ export class Checkout implements OnInit {
     }
 
     if (!this.cartService.meetsMinOrder()) {
+      return;
+    }
+
+    if (this.deliveryCheckResult() && !this.deliveryCheckResult()?.isDeliverable) {
+      alert(this.deliveryCheckResult()?.message || 'Sorry, delivery is not available at your location.');
       return;
     }
 

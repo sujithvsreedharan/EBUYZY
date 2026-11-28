@@ -1,8 +1,18 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import { SettingsService } from './settings.service';
 import { StoreDetailsResponse } from '../models/settings.model';
+import { apiUrl } from '../../app.constant';
+
+export interface DeliveryAvailableResponse {
+  success: boolean;
+  isDeliverable: boolean;
+  distanceKm?: number;
+  radiusKm?: number;
+  message: string;
+}
 
 export interface DeliveryLocation {
   locality: string;
@@ -38,6 +48,8 @@ export interface DeliveryCheckResult {
 })
 export class DeliveryAreaService {
   private readonly settingsService = inject(SettingsService);
+  private readonly http = inject(HttpClient);
+  private readonly apiUrl = apiUrl;
 
   private readonly STORAGE_LOCATION_KEY = 'ebuyzy_delivery_location';
   private readonly STORAGE_PROMPT_KEY = 'ebuyzy_delivery_prompt_dismissed';
@@ -50,6 +62,20 @@ export class DeliveryAreaService {
     const loc = this.selectedLocation();
     return !!loc && loc.verified && loc.isDeliverable;
   });
+
+  /**
+   * Calls POST /api/delivery/available
+   * Checks whether the given coordinates are within the store delivery area
+   */
+  checkDeliveryAvailable(latitude: number | string, longitude: number | string): Observable<DeliveryAvailableResponse> {
+    return this.http.post<DeliveryAvailableResponse>(
+      `${this.apiUrl}/api/delivery/available`,
+      {
+        lattitude: String(latitude),
+        longitude: String(longitude)
+      }
+    );
+  }
 
   constructor() {
     this.checkInitialPopupTrigger();
