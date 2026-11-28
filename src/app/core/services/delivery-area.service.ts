@@ -91,46 +91,28 @@ export class DeliveryAreaService {
   }
 
   /**
-   * On initial app open, check if location permission is already available or prompt user
+   * On initial app open, checks if user already has a verified location.
+   * If not, opens the location checking popup so they can check delivery availability.
    */
-  private checkInitialPopupTrigger(): void {
+  checkInitialPopupTrigger(force = false): void {
     if (typeof window === 'undefined' || window.location.pathname.startsWith('/admin')) {
       return;
     }
 
     const stored = this.getStoredLocation();
 
-    // If user already verified a location, sync settings with saved coordinates
-    if (stored && stored.latitude != null && stored.longitude != null) {
+    // If user already has a verified, deliverable location confirmed
+    if (!force && stored && stored.verified && stored.isDeliverable && stored.latitude != null && stored.longitude != null) {
       this.settingsService.getSettings(stored.latitude, stored.longitude).subscribe({
         error: (err) => console.warn('Could not sync store settings for stored location:', err)
       });
       return;
     }
 
-    // If no verified location yet, check if browser geolocation permission is already granted
-    const dismissed = sessionStorage.getItem(this.STORAGE_PROMPT_KEY);
-
-    if (typeof navigator !== 'undefined' && 'permissions' in navigator && navigator.permissions?.query) {
-      navigator.permissions
-        .query({ name: 'geolocation' as PermissionName })
-        .then((permissionStatus) => {
-          if (permissionStatus.state === 'granted') {
-            // Permission already granted: detect user location and check store availability via backend API
-            this.autoDetectLocationAndCheckStore();
-          } else if (!dismissed) {
-            // Show modal prompt
-            setTimeout(() => this.isModalOpen.set(true), 600);
-          }
-        })
-        .catch(() => {
-          if (!dismissed) {
-            setTimeout(() => this.isModalOpen.set(true), 600);
-          }
-        });
-    } else if (!dismissed) {
-      setTimeout(() => this.isModalOpen.set(true), 600);
-    }
+    // Always open location checking modal if location is unverified or missing
+    setTimeout(() => {
+      this.isModalOpen.set(true);
+    }, 400);
   }
 
   /**
@@ -171,9 +153,6 @@ export class DeliveryAreaService {
 
   closeModal(): void {
     this.isModalOpen.set(false);
-    try {
-      sessionStorage.setItem(this.STORAGE_PROMPT_KEY, 'true');
-    } catch {}
   }
 
   /**

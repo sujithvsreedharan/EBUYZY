@@ -1,4 +1,4 @@
-import { Component, HostListener, computed, inject, signal } from '@angular/core';
+import { Component, HostListener, computed, inject, signal, OnInit } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
@@ -19,7 +19,7 @@ import { DeliveryAreaService } from '../../../core/services/delivery-area.servic
   templateUrl: './user-layout.html',
   styleUrl: './user-layout.css',
 })
-export class UserLayout {
+export class UserLayout implements OnInit {
   protected readonly cartService = inject(CartService);
   protected readonly authService = inject(AuthService);
   protected readonly themeService = inject(ThemeService);
@@ -38,6 +38,10 @@ export class UserLayout {
     const user = this.authService.currentUser();
     return user?.name ? user.name.trim().charAt(0).toUpperCase() : 'U';
   });
+
+  ngOnInit(): void {
+    this.deliveryService.checkInitialPopupTrigger();
+  }
 
   @HostListener('document:keydown.escape')
   onEscapeKey(): void {

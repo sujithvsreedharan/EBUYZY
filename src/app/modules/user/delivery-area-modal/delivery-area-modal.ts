@@ -64,7 +64,7 @@ export class DeliveryAreaModal {
             : 'GPS timed out. Trying network location...'
         );
       },
-      { timeout: 10000, enableHighAccuracy: false, maximumAge: 30000 }
+      { timeout: 12000, enableHighAccuracy: true, maximumAge: 0 }
     );
   }
 
